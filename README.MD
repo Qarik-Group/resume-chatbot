@@ -205,11 +205,13 @@ local container):
 
 ## Architecture
 
-This application can be run in two modes
+This application can be deployed in two modes (controlled by the "ENABLE_IAP" flag in the root '.env' file):
 
 1. Simple - without using IAP, allowing users to connect directly to Cloud Run services.
+
 2. Advanced - with IAP to protect access to the frontend and backend Cloud Run services.
 
-The diagram below shows the architecture for the simple version without using IAP:
+![Resume chatbot architecture](./doc/images/architecture.png)
 
-![Simple architecture without using IAP](./doc/images/simple-architecture.png)
+Note: Currently PDF files with resumes are statically stored locally in the [data](./components/server/data) directory
+of the backend container, but in the future will be loaded and dynamically updated via GCS.
