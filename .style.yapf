@@ -1,0 +1,12 @@
+# See all options here: https://github.com/google/yapf#formatting-style
+
+[style]
+based_on_style = yapf
+column_limit = 120
+spaces_before_comment = 4
+indent_width = 4
+split_before_logical_operator = true
+split_before_arithmetic_operator = true
+# split_penalty_logical_operator = true
+# split_penalty_after_unary_operator = true
+# split_all_comma_separated_values = true

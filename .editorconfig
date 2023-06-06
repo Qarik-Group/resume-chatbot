@@ -1,0 +1,30 @@
+# EditorConfig is awesome: http://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+indent_style = space
+max_line_length = 120
+
+# 4 space indentation
+[*.{py}]
+indent_size = 4
+quote_type = single
+
+# 2 space indentation
+[*.{java,js,json,ts,html,sh,tf,sql}]
+indent_size = 2
+
+[*.{sh,y{a,}ml}]
+indent_size = 2
+quote_type = single
+
+[*.{md}]
+indent_size = 2
+max_line_length = 80

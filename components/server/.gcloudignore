@@ -1,0 +1,26 @@
+<!-- Files to ignore for cloud build commands -->
+.gcloudignore
+.git
+.gitignore
+
+README.md
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+.pytest_cache
+dev
+data/storage
+**/.env*
+**/.venv*
+**/.idea
+**/.vscode
+**/.pytest_cache
+**/.coverage
+**/.cache
+**/.gitignore
+**/.DS_Store
+**/.dockerignore
+
+#!include:.gitignore
+!data/*

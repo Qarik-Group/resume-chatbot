@@ -1,0 +1,7 @@
+# ~/.shellcheckrc
+
+# Suggest ${VAR} in place of $VAR
+enable=require-variable-braces
+
+# Follow file paths
+external-sources=true
