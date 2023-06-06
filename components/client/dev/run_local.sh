@@ -22,8 +22,8 @@ source "../../../.env"
 source "../.env"
 cd ..
 
-# echo "Running as local process..."
-# npm start
+echo "Running as local process..."
+npm start
 
-echo "Running in local docker..."
-docker run --env-file .env --env-file ../../.env -p "${HOST_PORT}:${PORT}" --rm "${IMAGE_NAME}"
+# echo "Running in local docker (make sure you run the ./build_local.sh first)..."
+# docker run --env-file .env --env-file ../../.env -p "${HOST_PORT}:${PORT}" --rm "${IMAGE_NAME}"

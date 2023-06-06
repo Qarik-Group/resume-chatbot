@@ -74,7 +74,7 @@ def main():
         logger.error('No resumes found in the database. Please upload resumes or connect to the database.')
         return
 
-    # test_queries(query_engine)
+    test_queries(query_engine)
 
     print('\n\nINTERACTIVE MODE:')
     while True:

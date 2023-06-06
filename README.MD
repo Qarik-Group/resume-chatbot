@@ -11,7 +11,7 @@ limitations under the License. -->
 
 <!-- LLM part is based on: https://gpt-index.readthedocs.io/en/stable/guides/tutorials.html -->
 
-# Skills Bot
+# Resume Chatbot
 
 This project allows users to interact with people resumes stored in PDF files and ask questions about a single resume or
 a group of people in plain English. Example questions:
@@ -27,6 +27,14 @@ a group of people in plain English. Example questions:
 - Among all people, who has the most experience with Java, Google Cloud, and Kubernetes?
 - How many people have skills in Python and Machine Learning?
 - Where did [person name] work the longest?
+
+Here is an example of the UI:
+
+![Web UI screenshot with sample Q&A](./doc/images/chat-ui-screenshot.png)
+
+Note that in the current implementation queries across multiple resumes often fail. This bug is a work in progress. If
+you found a bug, or have any ideas on how to improve this tool, please
+[open an issue](https://github.com/Qarik-Group/resume-chatbot/issues), or better yet - submit a pull request.
 
 ## Prerequisites
 
@@ -137,3 +145,71 @@ In order to build and deploy this project you need the following:
 
 - Open the chatbot web page using url [https://<UI_IP_ADDRESS>.nip.io] (if you are using IAP, or use direct Cloud Run
   URL if you are not) and interact with the bot. Qarik employees can use this frontend: [go/skills-bot](go/skills-bot).
+
+## Test queries locally
+
+The experimentation with the queries is best done on a local machine, which can be your physical machine, or a cloud
+based environment. To run the server and tests locally follow the steps below:
+
+- Follow the "setup" section above up to and including "./setup.sh" script (frankly some of the setup wont be needed for
+  development, so feel free to comment it out as you see fit).
+
+- In your terminal run the local instance of the server:
+
+  ```bash
+  cd "${PROJECT_HOME}"
+  source .venv/bin/activate
+  cd components/server/dev
+  ./run_local.sh
+  ```
+
+- In another terminal run the local instance of the test:
+
+  ```bash
+  cd "${PROJECT_HOME}"
+  source .venv/bin/activate
+  cd components/server/dev
+  ./test.sh
+  ```
+
+![Command line test for queries - screenshot](./doc/images/cmd-line-test-screenshot.png)
+
+## Development
+
+The development is best done on a local machine, which can be your physical machine, or a cloud based environment. You
+can run the server as the local Python process (or as a local container), and run UI in a local NodeJS process (or a
+local container):
+
+- Follow the "setup" section above up to and including "./setup.sh" script (frankly some of the setup wont be needed for
+  development, so feel free to comment it out as you see fit).
+
+- In your terminal run the local instance of the server:
+
+  ```bash
+  cd "${PROJECT_HOME}"
+  source .venv/bin/activate
+  cd components/server/dev
+  ./run_local.sh
+  ```
+
+- In another terminal run the local instance of the client:
+
+  ```bash
+  cd "${PROJECT_HOME}"
+  cd components/client/dev
+  ./run_local.sh
+  ```
+
+- Once you open the local client UI in your browser, navigate to the "Settings" menu option and update the "Backend URL"
+  to point to your local server: "http://127.0.0.1:8000".
+
+## Architecture
+
+This application can be run in two modes
+
+1. Simple - without using IAP, allowing users to connect directly to Cloud Run services.
+2. Advanced - with IAP to protect access to the frontend and backend Cloud Run services.
+
+The diagram below shows the architecture for the simple version without using IAP:
+
+![Simple architecture without using IAP](./doc/images/simple-architecture.png)
