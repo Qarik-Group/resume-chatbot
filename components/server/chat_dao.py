@@ -13,10 +13,10 @@
 # limitations under the License.
 """Data Access Object to abstract access to the database from the rest of the app."""
 
-from datetime import timedelta
-from typing import Any
+# from datetime import timedelta
+# from typing import Any
 
-import datetimes
+# import datetimes
 import firestore_tools
 from google.cloud import firestore    # type: ignore
 import solution

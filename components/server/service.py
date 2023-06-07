@@ -19,6 +19,7 @@ from fastapi import Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import api_tools
+import chat_dao
 import solution
 import llm_tools
 from log import Logger, log_params
@@ -42,6 +43,8 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
+_db = chat_dao.ChatDao()
+"""Data Access Object to abstract access to the database from the rest of the app."""
 
 class AskInput(BaseModel):
     question: str
