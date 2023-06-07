@@ -32,7 +32,12 @@ Qarik employees can use an IAP secured application loaded with resumes of Qarik 
 If you found a bug, or have any ideas on how to improve this tool, please
 [open an issue](https://github.com/Qarik-Group/resume-chatbot/issues), or better yet - submit a pull request.
 
-## Architecture
+## How does this app work?
+
+The application is hosted on GCP as Cloud Run services. Resumes of multiple people uploaded in PDF format to the server
+(currently just keeping a local copy inside of the docker image, but really needs to be on Drive or GCS). The backend is
+built using Python and FastAPI. The bot uses OpenAI's LLM (Language Model) to generate answers to your queries. The bot
+also uses LlamaIndex framework with LangChain to extract data from resumes uploaded into the system.
 
 This application can be run on Linux or MacOS locally, or deployed on GCP in two modes (controlled by the "ENABLE_IAP"
 flag in the root '.env' file):
@@ -139,6 +144,8 @@ local container):
 
 ## Deployment to GCP without using IAP (simple, but not secure)
 
+This assumes that the initial setup was done using the `ENABLE_IAP=false` in the .env file at the root directory.
+
 - Build and deploy the query engine backend to Cloud Run:
 
   ```bash
@@ -162,6 +169,15 @@ local container):
 - Open the chatbot web page using url from the deployment step above and interact with the bot.
 
 ## Deployment to GCP with IAP (advanced and more secure)
+
+- Change the `ENABLE_IAP=true` in the .env file at the root directory.
+
+- Re-run the setup:
+
+  ```bash
+  cd "${PROJECT_HOME}"
+  ./setup.sh
+  ```
 
 - Build and deploy the server to Cloud Run:
 
@@ -214,10 +230,3 @@ local container):
   These changes may take from few minutes to hours to propagate, but the good news you only need to do it once.
 
 - Open the chatbot web page using url [https://<UI_IP_ADDRESS>.nip.io] and interact with the bot.
-
-## How does this app work?
-
-The application is hosted on GCP as Cloud Run services. Resumes of multiple people uploaded in PDF format to the server
-(currently just keeping a local copy inside of the docker image, but really needs to be on Drive or GCS). The backend is
-built using Python and FastAPI. The bot uses OpenAI's LLM (Language Model) to generate answers to your queries. The bot
-also uses LlamaIndex framework with LangChain to extract data from resumes uploaded into the system.
