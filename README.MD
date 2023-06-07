@@ -25,7 +25,7 @@ group of people in plain English. Example questions:
 - List all people with Kubernetes or GCP certifications.
 
 Qarik employees can use an IAP secured application loaded with resumes of Qarik employees here:
-[go/skills-bot](go/skills-bot). Here is an example of the UI running in a browser:
+[go/skills-bot](https://go/skills-bot). Here is an example of the UI running in a browser:
 
 ![Web UI screenshot with sample Q&A](./doc/images/chat-ui-screenshot.png)
 
@@ -58,6 +58,8 @@ In order to build and deploy this project you need the following:
 
 - ChatGPT API key
 - Install GCLoud SDK
+- Install Python 3.10+
+- Install npm
 - Google Cloud project (not needed if you simply want to run a local client and server)
 - Ability to create external IP addresses in your GCP project (only if you decide to use IAP in front of Cloud Run)
 
@@ -96,10 +98,9 @@ In order to build and deploy this project you need the following:
   ./setup.sh
   ```
 
-## Test query engine locally
+## Test query engine
 
-The experimentation with the queries is best done on a local machine, which can be your physical machine, or a cloud
-based environment:
+The experimentation with the queries can be done on a local machine:
 
 - Activate the Python virtual environment in your terminal (only do it once in a terminal session):
 
@@ -108,7 +109,7 @@ based environment:
   source .venv/bin/activate
   ```
 
-- Run the set of tests against the query engine locally:
+- Run the set of pre-built tests against the query engine, or use it in the interactive mode:
 
   ```bash
   cd components/server/dev
@@ -117,13 +118,20 @@ based environment:
 
 ![Command line test for queries - screenshot](./doc/images/cmd-line-test-screenshot.png)
 
-## Local development
+## Development
 
-The development can be done on a local machine, which can be your physical machine, or a cloud based environment. You
-can run the server as the local Python process (or as a local container), and run UI in a local NodeJS process (or a
-local container):
+The development can be done on a local machine (everything, except for the ChatGPT itself), which can be your physical
+machine, or a cloud based environment. You can run local Firestore emulator, the query engine server as the local Python
+process (or as a local container), and run UI in a local NodeJS process (or a local container):
 
-- In your terminal run the local instance of the server:
+- In your terminal start the Firestore emulator:
+
+  ```bash
+  cd "${PROJECT_HOME}/components/server/dev"
+  ./firebase_emulator.sh
+  ```
+
+- In another terminal window run the local instance of the server:
 
   ```bash
   cd "${PROJECT_HOME}"
@@ -140,9 +148,11 @@ local container):
   ```
 
 - Once you open the local client UI in your browser, navigate to the "Settings" menu option and update the "Backend URL"
-  to point to your local server: [http://127.0.0.1:8000](http://127.0.0.1:8000).
+  to point to your local server: [http://127.0.0.1:8000](http://127.0.0.1:8000). If you want your client UI to always
+  point to the local query engine instance, edit the [App.js](./components/client/src/App.js) and change the
+  `defaultBackendUrl`.
 
-## Deployment to GCP without using IAP (simple, but not secure)
+## Deployment to GCP with security disabled (no IAP, no IAM)
 
 This assumes that the initial setup was done using the `ENABLE_IAP=false` in the .env file at the root directory.
 
@@ -156,7 +166,7 @@ This assumes that the initial setup was done using the `ENABLE_IAP=false` in the
 - Update the [app.js](components/client/src/App.js) with the URL of your backend service deployed in the step above:
 
   ```javascript
-  const serverBackendUrl = "https://skillsbot-backend-l3gt8712uh-uc.a.run.app";
+  const serverBackendUrl = "https://<put-your-Cloud-Run-URL-here>.a.run.app";
   ```
 
 - Build and deploy the UI service to Cloud Run:
@@ -168,7 +178,7 @@ This assumes that the initial setup was done using the `ENABLE_IAP=false` in the
 
 - Open the chatbot web page using url from the deployment step above and interact with the bot.
 
-## Deployment to GCP with IAP (advanced and more secure)
+## Deployment to GCP with security enabled (IAP and IAM)
 
 - Change the `ENABLE_IAP=true` in the .env file at the root directory.
 

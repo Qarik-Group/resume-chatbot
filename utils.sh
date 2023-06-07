@@ -194,6 +194,9 @@ get_svc_url() {
 #############################################
 install_firestore_emulator() {
   log "Install Firebase local emulator..."
+  if [[ -d /opt/homebrew/lib/node_modules/firebase-tools ]]; then
+    log "Firebase emulator already exists. Skipping..."
+  fi
   npm install -g firebase-tools
 }
 
@@ -270,7 +273,11 @@ create_firestore_instance() {
       log "Firestore already exists. Skipping..."
     else
       log "Create Firestore in Native mode."
-      gcloud firestore databases create --project "${PROJECT_ID}" --location="${FIRESTORE_LOCATION}" --quiet 1>/dev/null
+      gcloud firestore databases create \
+        --type firestore-native \
+        --project "${PROJECT_ID}" \
+        --location="${FIRESTORE_LOCATION}" \
+        --quiet 1>/dev/null
     fi
   else
     die "App Engine is not enabled for project [${PROJECT_ID}]. Can not use Firestore."

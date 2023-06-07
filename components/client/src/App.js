@@ -53,23 +53,22 @@ const cloudRunBackend = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
 // eslint-disable-next-line no-unused-vars
 const iapBackend = "https://34.95.89.166.nip.io";
 // Which backend URL to use as the default value
-const defaultBackendUrl = localHostBackend;
+const defaultBackendUrl = iapBackend;
 
-const fakeIdToken = "fakeIdToken";
-
-let idToken = null;
 let userName = null;
+const fakeIdToken = "fakeIdToken";
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [currentTab, setCurrentTab] = useState("Chat");
   const [messages, setMessages] = useState([]);
   const [backendUrl, setBackendUrl] = useState(defaultBackendUrl);
+  const [idToken, setIdToken] = useState(null);
   console.info(`DEBUG: backendUrl: ${backendUrl}`);
 
   // If query engine is running locally or on unprotected Cloud Run, then use fake ID token and ignore user Auth
   if (backendUrl.includes("127.0.0.1") || backendUrl.includes("localhost") || backendUrl.includes(".run.app")) {
-    idToken = fakeIdToken;
+    setIdToken(fakeIdToken);
     userName = "Test User";
   }
 
@@ -90,7 +89,7 @@ function App() {
           },
         })
         .then((res) => {
-          idToken = user.access_token;
+          setIdToken(user.access_token);
           userName = res.data.name;
           console.info(`DEBUG: userName: ${userName}`);
         })
@@ -103,6 +102,9 @@ function App() {
       setBackendUrl(event.target.value.slice(0, -1));
     } else {
       setBackendUrl(event.target.value);
+    }
+    if (idToken === fakeIdToken) {
+      setIdToken(null);
     }
   };
 
@@ -163,7 +165,7 @@ function App() {
 
       <Main>
         <AppBarSpacer />
-        {!idToken && <GoogleButton onClick={() => login()} />}
+        {!idToken && (currentTab === "Chat" || currentTab === "Resumes") && <GoogleButton onClick={() => login()} />}
         {idToken && (
           <Box
             sx={{
@@ -172,7 +174,9 @@ function App() {
               flexDirection: "column",
             }}
           >
-            {currentTab === "Chat" && <Chat messages={messages} addMessage={addMessage} backendUrl={backendUrl} />}
+            {currentTab === "Chat" && (
+              <Chat messages={messages} addMessage={addMessage} backendUrl={backendUrl} idToken={idToken} />
+            )}
           </Box>
         )}
         <Box sx={{ width: "100%" }}>
@@ -223,13 +227,17 @@ function App() {
           )}
         </Box>
         <Box sx={{ width: "100%" }}>{currentTab === "Help" && <Help />}</Box>
-        {idToken && <Box sx={{ width: "100%" }}>{currentTab === "Resumes" && <Resumes backendUrl={backendUrl} />}</Box>}
+        {idToken && (
+          <Box sx={{ width: "100%" }}>
+            {currentTab === "Resumes" && <Resumes backendUrl={backendUrl} idToken={idToken} />}
+          </Box>
+        )}
       </Main>
     </Box>
   );
 }
 
-function Chat({ messages, addMessage, backendUrl }) {
+function Chat({ messages, addMessage, backendUrl, idToken }) {
   const [question, setQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -251,7 +259,10 @@ function Chat({ messages, addMessage, backendUrl }) {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
-          Accept: "application/json",
+          // Accept: "application/json",
+          Accept: "application/json, text/plain, */*",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Credentials": true,
         },
         body: JSON.stringify({ question: question }),
       });
@@ -411,7 +422,7 @@ function Help() {
   );
 }
 
-function Resumes({ backendUrl }) {
+function Resumes({ backendUrl, idToken }) {
   const [peopleList, setPeopleList] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -424,10 +435,10 @@ function Resumes({ backendUrl }) {
         credentials: idToken === fakeIdToken ? "omit" : "include",
         headers: {
           Authorization: `Bearer ${idToken}`,
-          Accept: "application/json",
-          // Accept: "application/json, text/plain, */*",
-          // "Access-Control-Allow-Origin": "*",
-          // "Access-Control-Allow-Credentials": true,
+          // Accept: "application/json",
+          Accept: "application/json, text/plain, */*",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Credentials": true,
         },
       });
 
@@ -447,6 +458,7 @@ function Resumes({ backendUrl }) {
 
   useEffect(() => {
     fetchPeopleList();
+    // eslint-disable-next-line
   }, []);
 
   return (
