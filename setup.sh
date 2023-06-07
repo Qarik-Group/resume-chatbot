@@ -67,20 +67,19 @@ enable_apis() {
 ###############################################
 # MAIN
 ###############################################
-print_header "Configuring Resume Chatbot"
-authenticate_gcp
-install_firestore_emulator
-install_python_virtual_env
-enable_apis
-create_registry
-enable_app_engine
-create_firestore_instance
+# print_header "Configuring Resume Chatbot"
+# authenticate_gcp
+# install_firestore_emulator
+# install_python_virtual_env
+# enable_apis
+# create_registry
+# create_firestore_instance
 define_chat_svc_service_account
-create_sa "${UI_SVC_NAME}"
+# create_sa "${UI_SVC_NAME}"
 
-if [[ "${ENABLE_IAP}" == "true" ]]; then
-  enable_oauth
-  reserve_ip
-  create_ssl_certificate
-fi
-print_footer
+# if [[ "${ENABLE_IAP}" == "true" ]]; then
+#   enable_oauth
+#   reserve_ip
+#   create_ssl_certificate
+# fi
+# print_footer

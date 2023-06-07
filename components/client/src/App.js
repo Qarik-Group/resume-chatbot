@@ -64,20 +64,23 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [backendUrl, setBackendUrl] = useState(defaultBackendUrl);
   const [idToken, setIdToken] = useState(null);
-  console.info(`DEBUG: backendUrl: ${backendUrl}`);
-
-  // If query engine is running locally or on unprotected Cloud Run, then use fake ID token and ignore user Auth
-  if (backendUrl.includes("127.0.0.1") || backendUrl.includes("localhost") || backendUrl.includes(".run.app")) {
-    setIdToken(fakeIdToken);
-    userName = "Test User";
-  }
-
   const [user, setUser] = useState([]);
 
   const login = useGoogleLogin({
     onSuccess: (codeResponse) => setUser(codeResponse),
     onError: (error) => console.log("Login Failed:", error),
   });
+
+  console.info(`DEBUG: backendUrl: ${backendUrl}, idToken: ${idToken}`);
+
+  useEffect(() => {
+    // If query engine is running locally or on unprotected Cloud Run, then use fake ID token and ignore user Auth
+    if (backendUrl.includes("127.0.0.1") || backendUrl.includes("localhost") || backendUrl.includes(".run.app")) {
+      setIdToken(fakeIdToken);
+      userName = "Test User";
+      console.info(`DEBUG: updating idToken to fakeIdToken: ${idToken}`);
+    }
+  }, [backendUrl]);
 
   useEffect(() => {
     if (user && idToken !== fakeIdToken) {

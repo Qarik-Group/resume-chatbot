@@ -23,5 +23,7 @@ source "../../../.env"
 # shellcheck source=/dev/null
 source "../.env"
 
+# FIRESTORE_EMULATOR_HOST=localhost:8070
+
 # See additional details here: https://firebase.google.com/docs/emulator-suite/install_and_configure
 firebase emulators:start --only firestore --project "${PROJECT_ID}"
