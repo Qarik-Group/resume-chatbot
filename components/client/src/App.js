@@ -47,13 +47,13 @@ const Main = styled("main")(({ theme }) => ({
 const AppBarSpacer = styled("div")(({ theme }) => theme.mixins.toolbar);
 
 // eslint-disable-next-line no-unused-vars
-const devLocalBackendUrl = "http://127.0.0.1:8000";
+const localHostBackend = "http://127.0.0.1:8000";
 // eslint-disable-next-line no-unused-vars
-const testCloudRunBackendUrl = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
+const cloudRunBackend = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
 // eslint-disable-next-line no-unused-vars
-const prodIAPurl = "https://34.95.89.166.nip.io";
+const iapBackend = "https://34.95.89.166.nip.io";
 // Which backend URL to use as the default value
-const defaultBackendUrl = devLocalBackendUrl;
+const defaultBackendUrl = localHostBackend;
 
 const fakeIdToken = "fakeIdToken";
 
@@ -67,7 +67,8 @@ function App() {
   const [backendUrl, setBackendUrl] = useState(defaultBackendUrl);
   console.info(`DEBUG: backendUrl: ${backendUrl}`);
 
-  if (backendUrl === devLocalBackendUrl) {
+  // If query engine is running locally or on unprotected Cloud Run, then use fake ID token and ignore user Auth
+  if (backendUrl.includes("127.0.0.1") || backendUrl.includes("localhost") || backendUrl.includes(".run.app")) {
     idToken = fakeIdToken;
     userName = "Test User";
   }
