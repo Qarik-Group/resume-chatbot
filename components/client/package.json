@@ -28,12 +28,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Qarik-Group/skills-bot.git"
+    "url": "git+https://github.com/Qarik-Group/resume-chatbot.git"
   },
   "author": "Roman Kharkovski <kharkovski@gmail.com>",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/Qarik-Group/skills-bot/issues"
+    "url": "https://github.com/Qarik-Group/resume-chatbot/issues"
   },
   "eslintConfig": {
     "extends": [

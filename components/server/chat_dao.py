@@ -17,10 +17,10 @@ from datetime import timedelta
 from typing import Any
 
 import datetimes
-import solution
 import firestore_tools
-from log import Logger, log
 from google.cloud import firestore    # type: ignore
+import solution
+from log import Logger, log
 
 logger = Logger(__name__).get_logger()
 

@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, List
 
 import llama_index
+import solution
 from langchain import OpenAI
 # from langchain.chat_models import ChatOpenAI
 from langchain.llms.openai import OpenAIChat
@@ -31,10 +32,7 @@ from llama_index.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.query_engine.transform_query_engine import TransformQueryEngine
 from llama_index.selectors.llm_selectors import LLMSingleSelector
 from llama_index.tools.query_engine import QueryEngineTool
-
 import constants
-import llm_tools
-import solution
 from log import Logger, log
 
 logger = Logger(__name__).get_logger()
@@ -149,7 +147,7 @@ def _load_resume_index_summary(resumes: dict[str, Any]) -> dict[str, str]:
 @log
 def get_resume_query_engine() -> BaseQueryEngine | None:
     """Load the index from disk, or build it if it doesn't exist."""
-    llm_predictor = llm_tools.get_llm(
+    llm_predictor = get_llm(
         model_name=constants.MODEL_NAME, temperature=constants.TEMPERATURE, api_key=API_KEY)
     service_context = ServiceContext.from_defaults(
         llm_predictor=llm_predictor, chunk_size_limit=constants.CHUNK_SIZE_LIMIT)

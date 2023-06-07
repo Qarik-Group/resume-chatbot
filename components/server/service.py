@@ -13,16 +13,15 @@
 # limitations under the License.
 """Main API service that handles REST API calls to LLM and is run on server."""
 
-import os
 from typing import Annotated
 
-import api_tools
-import llm_tools
 from fastapi import Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import api_tools
 import solution
-from log import Logger, log, log_params
+import llm_tools
+from log import Logger, log_params
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
@@ -45,14 +44,12 @@ app.add_middleware(
 
 
 class AskInput(BaseModel):
-    user_id: str
     question: str
 
 
 @app.post('/ask')
 @log_params
 def ask(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
-    # user_id = data.user_id
     question = data.question
 
     # TODO: investigate if this may be cached or shared across requests
@@ -89,20 +86,13 @@ def ask(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, H
 @app.get('/people')
 @log_params
 def list_people() -> list[str]:
-    """List all people in the database."""
+    """List all people names found in the database of uploaded resumes."""
     people = llm_tools.load_resumes()
     return [person for person in people.keys()]
 
 
-@app.get('/health', name='Basic information about the software version and solution configuration.')
+@app.get('/health', name='Health check and information about the software version and configuration.')
 @log_params
 def healthcheck() -> dict:
     """Verify that the process is up without testing backend connections."""
     return solution.health_status()
-
-
-# @app.get('/info', include_in_schema=False)
-# @log_params
-# def info() -> dict:
-#     """Detailed debug info about the process."""
-#     return system.health_status_detailed()

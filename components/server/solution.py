@@ -13,7 +13,6 @@
 # limitations under the License.
 """Project wide settings and constants."""
 
-import os
 from cache import cache, getenv_no_cache
 
 
@@ -80,10 +79,3 @@ def health_status() -> dict:
         'version': SW_VERSION,
         'releaseDate': SW_DATE,
     }
-
-
-def health_status_detailed() -> dict:
-    """Return status message with version number and release date for healthcheck for service endpoints."""
-    status = health_status()
-    status['environment'] = os.environ,
-    return status

@@ -46,24 +46,33 @@ const Main = styled("main")(({ theme }) => ({
 
 const AppBarSpacer = styled("div")(({ theme }) => theme.mixins.toolbar);
 
-// const localBackendUrl = 'http://127.0.0.1:8000'
-// const serverBackendUrl = "https://34.95.89.166.nip.io";
-// const serverBackendUrl = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
-const serverBackendUrl = "https://skillsbot-backend-l5ej3633iq-uc.a.run.app";
+// eslint-disable-next-line no-unused-vars
+const devLocalBackendUrl = "http://127.0.0.1:8000";
+// eslint-disable-next-line no-unused-vars
+const testCloudRunBackendUrl = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
+// eslint-disable-next-line no-unused-vars
+const prodIAPurl = "https://34.95.89.166.nip.io";
+// Which backend URL to use as the default value
+const defaultBackendUrl = devLocalBackendUrl;
+
+const fakeIdToken = "fakeIdToken";
 
 let idToken = null;
-let userEmail = null;
 let userName = null;
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [currentTab, setCurrentTab] = useState("Chat");
   const [messages, setMessages] = useState([]);
-  const [backendUrl, setBackendUrl] = useState(serverBackendUrl);
-  console.info(`----- DEBUG: backendUrl: ${backendUrl}`);
+  const [backendUrl, setBackendUrl] = useState(defaultBackendUrl);
+  console.info(`DEBUG: backendUrl: ${backendUrl}`);
+
+  if (backendUrl === devLocalBackendUrl) {
+    idToken = fakeIdToken;
+    userName = "Test User";
+  }
 
   const [user, setUser] = useState([]);
-  const [profile, setProfile] = useState([]);
 
   const login = useGoogleLogin({
     onSuccess: (codeResponse) => setUser(codeResponse),
@@ -71,7 +80,7 @@ function App() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && idToken !== fakeIdToken) {
       axios
         .get(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${user.access_token}`, {
           headers: {
@@ -80,20 +89,15 @@ function App() {
           },
         })
         .then((res) => {
-          setProfile(res.data);
           idToken = user.access_token;
-          userEmail = res.data.email;
           userName = res.data.name;
-          console.info(`----- DEBUG: idToken: ${idToken}`);
-          console.info(`----- DEBUG: userEmail: ${userEmail}`);
-          console.info(`----- DEBUG: userName: ${userName}`);
+          console.info(`DEBUG: userName: ${userName}`);
         })
         .catch((err) => console.log(err));
     }
   }, [user]);
 
   const handleBackendUrlChange = (event) => {
-    // Trim trailing slash if it exists
     if (event.target.value.endsWith("/")) {
       setBackendUrl(event.target.value.slice(0, -1));
     } else {
@@ -141,7 +145,6 @@ function App() {
               position: "relative",
               whiteSpace: "normal",
               width: drawerWidth,
-              // backgroundColor: "#424242",
               color: "#ffffff",
             },
           }}
@@ -163,31 +166,15 @@ function App() {
         {idToken && (
           <Box
             sx={{
-              width: "100%", // Customize the chat box width here (e.g., '80%', '1200px')
+              width: "100%",
               flexGrow: 1,
               flexDirection: "column",
-              // height: '100vh',
-              // height: "90%", // Customize the chat box height here (e.g., '300px', '600px')
-              // padding: (theme) => theme.spacing(1),
-              // marginLeft: (theme) => theme.spacing(1),
-              // marginRight: (theme) => theme.spacing(1),
-              // marginTop: (theme) => theme.spacing(1),
             }}
           >
             {currentTab === "Chat" && <Chat messages={messages} addMessage={addMessage} backendUrl={backendUrl} />}
           </Box>
         )}
-        <Box
-          sx={{
-            width: "100%", // Customize the chat box width here (e.g., '80%', '1200px')
-            // height: "90%", // Customize the chat box height here (e.g., '300px', '600px')
-            // flexGrow: 1,
-            // padding: (theme) => theme.spacing(1),
-            // marginLeft: (theme) => theme.spacing(1),
-            // marginRight: (theme) => theme.spacing(1),
-            // marginTop: (theme) => theme.spacing(1),
-          }}
-        >
+        <Box sx={{ width: "100%" }}>
           {currentTab === "Settings" && (
             <Box>
               <Box
@@ -195,11 +182,8 @@ function App() {
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "flex-start",
-                  // border: "1px solid #555",
-                  // borderRadius: "4px",
                   padding: "16px",
                   minHeight: "400px",
-                  // backgroundColor: "#333",
                   marginBottom: "16px",
                   overflowY: "auto",
                 }}
@@ -213,13 +197,13 @@ function App() {
                   <b>Software update:</b> June 6, 2023
                 </Typography>
                 <Typography>
-                  <b>Author:</b> Roman Kharkovski (rkharkovski@gmail.com)
+                  <b>Author:</b> Roman Kharkovski (kharkovski@gmail.com)
                 </Typography>
                 <Typography>
                   <b>Home page:</b> <a href="go/skills-bot">go/skills-bot</a>
                 </Typography>
                 <Typography>
-                  <b>Source code:</b> <a href="https://github.com/Qarik-Group/skills-bot">GitHub repo</a>
+                  <b>Source code:</b> <a href="https://github.com/Qarik-Group/resume-chatbot">GitHub repo</a>
                 </Typography>
                 <Typography height={50}></Typography>
                 <TextField
@@ -237,22 +221,8 @@ function App() {
             </Box>
           )}
         </Box>
-        <Box
-          sx={{
-            width: "100%",
-          }}
-        >
-          {currentTab === "Help" && <Help />}
-        </Box>
-        {idToken && (
-          <Box
-            sx={{
-              width: "100%",
-            }}
-          >
-            {currentTab === "Resumes" && <Resumes backendUrl={backendUrl} />}
-          </Box>
-        )}
+        <Box sx={{ width: "100%" }}>{currentTab === "Help" && <Help />}</Box>
+        {idToken && <Box sx={{ width: "100%" }}>{currentTab === "Resumes" && <Resumes backendUrl={backendUrl} />}</Box>}
       </Main>
     </Box>
   );
@@ -262,6 +232,7 @@ function Chat({ messages, addMessage, backendUrl }) {
   const [question, setQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const answerPrefix = "Answer";
 
   const handleChange = (event) => {
     setQuestion(event.target.value);
@@ -275,13 +246,13 @@ function Chat({ messages, addMessage, backendUrl }) {
     try {
       const response = await fetch(`${backendUrl}/ask`, {
         method: "POST",
-        credentials: "include",
+        credentials: idToken === fakeIdToken ? "omit" : "include",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
           Accept: "application/json",
         },
-        body: JSON.stringify({ user_id: userEmail, question: question }),
+        body: JSON.stringify({ question: question }),
       });
 
       if (response.ok) {
@@ -289,8 +260,7 @@ function Chat({ messages, addMessage, backendUrl }) {
         const answer = data.answer;
 
         // Add the server's response to the chat history
-        addMessage({ sender: "Answer", text: answer });
-        addMessage({ sender: ":----------------------------------------", text: "" });
+        addMessage({ sender: answerPrefix, text: answer });
       } else {
         console.error("Error occurred while fetching answer:", response.status);
         setErrorMessage(`Error occurred while fetching answer: ${response}`);
@@ -300,7 +270,8 @@ function Chat({ messages, addMessage, backendUrl }) {
       setErrorMessage(`Error occurred while fetching answer: ${error}`);
     }
 
-    // setQuestion("");
+    // Reset the question field to be empty
+    setQuestion("");
     setIsLoading(false);
   };
 
@@ -323,6 +294,7 @@ function Chat({ messages, addMessage, backendUrl }) {
         {messages.map((message, index) => (
           <Typography key={index} variant="body1" gutterBottom>
             <b>{message.sender}:</b> {message.text}
+            {message.sender === answerPrefix && <Typography height={20}></Typography>}
           </Typography>
         ))}
       </Box>
@@ -448,13 +420,13 @@ function Resumes({ backendUrl }) {
     try {
       const response = await fetch(`${backendUrl}/people`, {
         method: "GET",
-        credentials: "include",
-        // mode: "no-cors",
+        credentials: idToken === fakeIdToken ? "omit" : "include",
         headers: {
           Authorization: `Bearer ${idToken}`,
-          Accept: "application/json, text/plain, */*",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Credentials": true,
+          Accept: "application/json",
+          // Accept: "application/json, text/plain, */*",
+          // "Access-Control-Allow-Origin": "*",
+          // "Access-Control-Allow-Credentials": true,
         },
       });
 
@@ -474,7 +446,7 @@ function Resumes({ backendUrl }) {
 
   useEffect(() => {
     fetchPeopleList();
-  }, []); // Pass an empty array to run the effect only on mount
+  }, []);
 
   return (
     <Box

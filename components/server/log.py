@@ -24,10 +24,10 @@ Typical usage:
             logger.debug('Blah blah %s, %s, %s', x, y, z)
 
 """
-import functools
-import logging
 import os
 import sys
+import functools
+import logging
 
 _LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
@@ -36,6 +36,7 @@ def setup_logger(log_format: str = '%(message)s', log_name: str = 'undefined_log
     """Initialize logging settings for the caller and return `logger` that can be used as `logger.info('message')`."""
     logger = logging.getLogger(log_name)
     logger.setLevel(_LOG_LEVEL)
+    logger.propagate = False
     # See log levels, formatting, etc. in the docs: https://docs.python.org/3/library/logging.html
     formatter = logging.Formatter(log_format)
     stdout_handler = logging.StreamHandler(sys.stdout)
@@ -48,7 +49,7 @@ def setup_logger(log_format: str = '%(message)s', log_name: str = 'undefined_log
 class Logger:
     """Logger class for using inside of method body, such as `log.debug()`."""
 
-    def __init__(self, log_name: str = 'debug_log') -> None:
+    def __init__(self, log_name: str = 'my_log') -> None:
         log_format = '%(levelname)s:%(filename)s:%(funcName)s(%(lineno)d): %(message)s'
         log_name_f = f'{log_name}_f'
         self.function_body_logger = setup_logger(log_format, log_name_f)

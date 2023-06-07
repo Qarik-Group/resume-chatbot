@@ -17,10 +17,10 @@ import json
 from typing import Any, Callable
 
 import fastapi
-from log import Logger
-import solution
 from fastapi import HTTPException, Request, Response
 from fastapi.routing import APIRoute
+import solution
+from log import Logger
 
 logger = Logger(__name__).get_logger()
 
