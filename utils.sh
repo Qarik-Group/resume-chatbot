@@ -224,6 +224,8 @@ authenticate_gcp() {
   log "Authenticate with Google Cloud..."
   gcloud auth login
   gcloud config set project "${PROJECT_ID}"
+  log "Create Application Default Credentials for running local processes connecting to GCP services..."
+  gcloud auth application-default login
 }
 
 #############################################
@@ -268,17 +270,21 @@ enable_app_engine() {
 # App Engine Application Creation
 #############################################
 create_firestore_instance() {
+  enable_app_engine
   if gcloud app describe --project="${PROJECT_ID}" &>/dev/null; then
     if gcloud firestore databases list --project "${PROJECT_ID}" &>/dev/null; then
       log "Firestore already exists. Skipping..."
     else
       log "Create Firestore in Native mode."
       gcloud firestore databases create \
-        --type firestore-native \
         --project "${PROJECT_ID}" \
         --location="${FIRESTORE_LOCATION}" \
         --quiet 1>/dev/null
     fi
+    log "CHanging Firestore to Native mode..."
+    gcloud alpha firestore databases update \
+      --project "${PROJECT_ID}" \
+      --type=firestore-native
   else
     die "App Engine is not enabled for project [${PROJECT_ID}]. Can not use Firestore."
   fi

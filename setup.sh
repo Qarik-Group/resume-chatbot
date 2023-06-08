@@ -73,7 +73,6 @@ install_firestore_emulator
 install_python_virtual_env
 enable_apis
 create_registry
-enable_app_engine
 create_firestore_instance
 define_chat_svc_service_account
 create_sa "${UI_SVC_NAME}"

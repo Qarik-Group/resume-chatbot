@@ -13,6 +13,7 @@
 # limitations under the License.
 """Main API service that handles REST API calls to LLM and is run on server."""
 
+import math
 from typing import Annotated
 
 from fastapi import Header
@@ -46,6 +47,7 @@ app.add_middleware(
 _db = chat_dao.ChatDao()
 """Data Access Object to abstract access to the database from the rest of the app."""
 
+
 class AskInput(BaseModel):
     question: str
 
@@ -61,28 +63,30 @@ def ask(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, H
     if query_engine is None:
         raise SystemError('No resumes found in the database. Please upload resumes.')
 
-    # Here are the headers passed from IAP
     user_id: str = 'anonymous'
     if x_goog_authenticated_user_email is None:
         logger.warning('No authenticated user email found in the request headers.')
     else:
+        # Header passed from IAP
         # Extract part of the x_goog_authenticated_user_email string after the ':'
         # Example: accounts.google.com:rkharkovski@qarik.com -> rkharkovski@qarik.com
         user_id = x_goog_authenticated_user_email.split(':')[-1]
     logger.debug('Received question from user: %s', user_id)
 
-    # logger.debug('Saving the question to Firestore')
-    # chat_ref = db.collection('chats').document(user_id)
-    # chat_ref.set({'user_id': user_id, 'question': question}, merge=True)
+    try:
+        logger.debug('Querying LLM...')
+        answer = query_engine.query(question)
+        # TODO - experiment with different prompt tunings
+        # response = query_engine.query(query_text + constants.QUERY_SUFFIX)
+    except Exception as e:
+        logger.error('Error querying LLM: %s', e)
+        try:
+            _db.save_question_answer(user_id=user_id, question=question, answer=f'Error querying LLM: {e}')
+        except Exception:
+            pass
+        raise SystemError('Error querying LLM: %s' % e)
 
-    logger.debug('Querying LLM...')
-    answer = query_engine.query(question)
-    # TODO - experiment with different prompt tunings
-    # response = query_engine.query(query_text + constants.QUERY_SUFFIX)
-
-    # logger.debug('Saving answer to Firestore...')
-    # chat_ref.update({'answer': answer})
-
+    _db.save_question_answer(user_id=user_id, question=question, answer=str(answer))
     return {'answer': str(answer)}
 
 

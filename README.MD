@@ -1,4 +1,5 @@
 <!-- Copyright 2023 Qarik Group, LLC
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -148,13 +149,7 @@ process (or as a local container), and run UI in a local NodeJS process (or a lo
   ```
 
 - Once you open the local client UI in your browser, navigate to the "Settings" menu option and update the "Backend URL"
-  to point to your local server: [http://127.0.0.1:8000](http://127.0.0.1:8000). If you want your client UI to always
-  point to the local query engine instance, edit the [App.js](./components/client/src/App.js) and change the
-  `defaultBackendUrl`.
-
-## Deployment to GCP with security disabled (no IAP, no IAM)
-
-This assumes that the initial setup was done using the `ENABLE_IAP=false` in the .env file at the root directory.
+  to point to your local server: [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 This assumes that the initial setup was done using the `ENABLE_IAP=false` in the .env file at the root directory.
 
@@ -180,25 +175,7 @@ This assumes that the initial setup was done using the `ENABLE_IAP=false` in the
 
 - Open the chatbot web page using url from the deployment step above and interact with the bot.
 
-## Deployment to GCP with security enabled (IAP and IAM)
-
-- Change the `ENABLE_IAP=true` in the .env file at the root directory.
-
-- Re-run the setup:
-
-  ```bash
-  cd "${PROJECT_HOME}"
-  ./setup.sh
-  ```
-
-- Change the `ENABLE_IAP=true` in the .env file at the root directory.
-
-- Re-run the setup:
-
-  ```bash
-  cd "${PROJECT_HOME}"
-  ./setup.sh
-  ```
+## Deployment to GCP with IAP (advanced and more secure)
 
 - Build and deploy the server to Cloud Run:
 
