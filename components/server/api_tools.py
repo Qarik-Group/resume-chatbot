@@ -13,13 +13,12 @@
 # limitations under the License.
 """Custom FastAPI routers to manipulate request/response flow."""
 
-import json
 from typing import Any, Callable
 
 import fastapi
+import solution
 from fastapi import HTTPException, Request, Response
 from fastapi.routing import APIRoute
-import solution
 from log import Logger
 
 logger = Logger(__name__).get_logger()
@@ -78,15 +77,6 @@ class ErrorHandler(APIRoute):
         async def custom_route_handler(request: Request) -> Response:
             """Add exception handler, so instead of "Internal Server Error" we show the real exception."""
             try:
-                # if config_dao.is_read_only_project():
-                #     status = solution.health_status()
-                #     # Add additional warning message
-                #     status['WARNING'] = str(
-                #         'This project is read only and does not process or validate input data. '
-                #         'This response is generic and is not using the output schema for the API you just called. '
-                #         'You can see proper response schema in the OpenAPI spec for this service.')
-                #     return Response(content=json.dumps(status))
-                #     # raise RuntimeWarning(status)
                 return await original_route_handler(request)
             except Exception as err:    # noqa
                 if isinstance(err, HTTPException):

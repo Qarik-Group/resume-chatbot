@@ -13,7 +13,6 @@
 # limitations under the License.
 """Project wide settings and constants."""
 
-from datetime import timezone
 from cache import cache, getenv_no_cache
 
 
@@ -40,14 +39,11 @@ def getenv(key: str, default: str | None = None) -> str:
 #########################################################
 # Project specific settings
 #########################################################
-SW_VERSION: str = getenv('SW_VERSION', '0.1.10')
+SW_VERSION: str = getenv('SW_VERSION', '0.1.11')
 """Version of this project."""
 
-SW_DATE: str = getenv('SW_DATE', 'June 6, 2023')
+SW_DATE: str = getenv('SW_DATE', 'June 8, 2023')
 """Release date of this project."""
-
-TIMEZONE: timezone = timezone.utc
-"""Normalize all dates to this timezone across the entire project."""
 
 RESOURCE_PREFIX: str = getenv('RESOURCE_PREFIX', 'skb')
 """Added to resource names so that in GCP Console it is easy to see what relates to this solution vs other resources."""

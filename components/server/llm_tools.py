@@ -18,6 +18,7 @@ import threading
 from pathlib import Path
 from typing import Any, List
 
+import constants
 import llama_index
 import solution
 from langchain import OpenAI
@@ -32,7 +33,6 @@ from llama_index.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.query_engine.transform_query_engine import TransformQueryEngine
 from llama_index.selectors.llm_selectors import LLMSingleSelector
 from llama_index.tools.query_engine import QueryEngineTool
-import constants
 from log import Logger, log
 
 logger = Logger(__name__).get_logger()
@@ -48,12 +48,8 @@ RESUMES: dict[str, List[Document]] = {}
 """Global data with resumes."""
 
 
-def get_llm(model_name, temperature, api_key, max_tokens=constants.MAX_TOKENS):
-    if model_name == 'text-davinci-003':
-        llm = OpenAI(temperature=temperature, model_name=model_name, max_tokens=max_tokens, openai_api_key=api_key)
-    else:
-        llm = OpenAIChat(temperature=temperature, model_name=model_name, openai_api_key=api_key)
-
+def get_llm(model_name, temperature, api_key):
+    llm = OpenAIChat(temperature=temperature, model_name=model_name, openai_api_key=api_key)
     return llama_index.LLMPredictor(llm=llm)
 
 
@@ -187,6 +183,7 @@ def get_resume_query_engine() -> BaseQueryEngine | None:
         response_mode='tree_summarize',
         service_context=service_context,
         verbose=True,
+        use_async=True,
     )
 
     graph_query_engine = graph.as_query_engine(custom_query_engines=custom_query_engines)

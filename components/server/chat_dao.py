@@ -15,9 +15,11 @@
 
 from datetime import datetime
 from typing import Any
+
 import firestore_tools
-from google.cloud import firestore    # type: ignore
 import solution
+import constants
+from google.cloud import firestore  # type: ignore
 from log import Logger, log
 
 logger = Logger(__name__).get_logger()
@@ -41,7 +43,7 @@ class ChatDao:
     def create(self, user_id: str) -> Any:
         """Create new user document and return DocRef."""
         doc_ref = self._collection.document(user_id)
-        doc_ref.set({'user_id': user_id, 'first_login': datetime.now(tz=solution.TIMEZONE)})
+        doc_ref.set({'user_id': user_id, 'first_login': datetime.now(tz=constants.TIMEZONE)})
         return doc_ref
 
     @log
@@ -65,7 +67,7 @@ class ChatDao:
         interaction: dict[str, Any] = {
             'question': question,
             'answer': answer,
-            'timestamp': datetime.now(tz=solution.TIMEZONE)
+            'timestamp': datetime.now(tz=constants.TIMEZONE)
         }
         # Append new interaction to the list of existing interactions in the user document
         data = {'interactions': firestore.ArrayUnion([interaction])}

@@ -13,17 +13,16 @@
 # limitations under the License.
 """Main API service that handles REST API calls to LLM and is run on server."""
 
-import math
 from typing import Annotated
 
-from fastapi import Header
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import api_tools
 import chat_dao
-import solution
 import llm_tools
+import solution
+from fastapi import Header
+from fastapi.middleware.cors import CORSMiddleware
 from log import Logger, log_params
+from pydantic import BaseModel
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')

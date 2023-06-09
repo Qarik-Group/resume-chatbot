@@ -24,10 +24,10 @@ Typical usage:
             logger.debug('Blah blah %s, %s, %s', x, y, z)
 
 """
-import os
-import sys
 import functools
 import logging
+import os
+import sys
 
 _LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 

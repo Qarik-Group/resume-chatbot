@@ -285,8 +285,8 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
       setErrorMessage(`Error occurred while fetching answer: ${error}`);
     }
 
-    // Reset the question field to be empty
-    setQuestion("");
+    // Reset the question field to be empty - or comment this out to leave it with the previous question
+    // setQuestion("");
     setIsLoading(false);
   };
 

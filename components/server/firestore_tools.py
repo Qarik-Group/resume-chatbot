@@ -14,8 +14,9 @@
 """Set of utility functions to work with Firestore."""
 
 import os
-from google.cloud import firestore    # type: ignore
+
 import solution
+from google.cloud import firestore  # type: ignore
 from log import Logger, log
 
 logger = Logger(__name__).get_logger()
