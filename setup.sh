@@ -21,61 +21,20 @@ source "./.env"
 # shellcheck source=/dev/null
 source "./utils.sh"
 
-#############################################
-# Grant IAM roles to chat service account
-#############################################
-define_chat_svc_service_account() {
-  local CHAT_SVC_SA_ROLES=(
-    roles/datastore.user
-  )
-
-  create_sa "${CHAT_SVC_NAME}"
-  local CHAT_SVC_EMAIL="${CHAT_SVC_NAME}-sa@${PROJECT_ID}.iam.gserviceaccount.com"
-
-  for role in "${CHAT_SVC_SA_ROLES[@]}"; do
-    log "Applying [${role}] to [${CHAT_SVC_EMAIL}]..."
-    gcloud -q projects add-iam-policy-binding "${PROJECT_ID}" \
-      --member="serviceAccount:${CHAT_SVC_EMAIL}" --role="${role}" &>/dev/null
-  done
-}
-
-#############################################
-# Enable GCP APIs
-#############################################
-enable_apis() {
-  log "Enable required GCP services..."
-  gcloud services enable \
-    appengine.googleapis.com \
-    artifactregistry.googleapis.com \
-    cloudbuild.googleapis.com \
-    cloudidentity.googleapis.com \
-    cloudresourcemanager.googleapis.com \
-    firestore.googleapis.com \
-    logging.googleapis.com \
-    run.googleapis.com \
-    storage.googleapis.com
-
-  if [[ "${ENABLE_IAP}" == "true" ]]; then
-    gcloud services enable \
-      certificatemanager.googleapis.com \
-      compute.googleapis.com \
-      iap.googleapis.com \
-      vpcaccess.googleapis.com
-  fi
-}
-
-###############################################
-# MAIN
-###############################################
 print_header "Configuring Resume Chatbot"
-authenticate_gcp
-install_firestore_emulator
-install_python_virtual_env
-enable_apis
-create_registry
-create_firestore_instance
-define_chat_svc_service_account
-create_sa "${UI_SVC_NAME}"
+# authenticate_gcp
+# install_firestore_emulator
+# install_python_virtual_env
+# enable_apis
+# create_registry
+# create_firestore_instance
+# create_resume_bucket
+# create_embeddings_bucket
+# define_chat_svc_sa
+# define_resume_svc_sa
+# create_sa "${UI_SVC_NAME}"
+# setup_resume_updates
+# create_eventarc_chat_channel
 
 if [[ "${ENABLE_IAP}" == "true" ]]; then
   enable_oauth

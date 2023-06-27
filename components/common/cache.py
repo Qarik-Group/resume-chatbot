@@ -21,8 +21,8 @@ import functools
 import os
 import time
 
-import constants
-from log import Logger
+from common import constants
+from common.log import Logger
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')

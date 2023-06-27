@@ -193,10 +193,11 @@ get_svc_url() {
 # Install Firebase local emulator
 #############################################
 install_firestore_emulator() {
-  log "Install Firebase local emulator..."
   if [[ -d /opt/homebrew/lib/node_modules/firebase-tools ]]; then
     log "Firebase emulator already exists. Skipping..."
+    return
   fi
+  log "Install Firebase local emulator..."
   npm install -g firebase-tools
 }
 
@@ -310,14 +311,30 @@ create_sa() {
 }
 
 #############################################
+# Create temp directory with sources for build
+# Arguments:
+#   $1: TMP directory
+#############################################
+prepare_sources() {
+  local TMP=$1
+  rm -rf "${TMP}"
+  mkdir -p "${TMP}"
+  cp ../* "${TMP}" || true
+  cp -r ../../common "${TMP}"
+}
+
+#############################################
 # Build docker image
 # Arguments:
 #   $1: Image name
 #############################################
 build() {
   local IMAGE_NAME=$1
-  log "Building docker image and pushing to artifact registry..."
-  gcloud builds submit --tag "${ARTIFACT_REGISTRY}/${IMAGE_NAME}"
+  local TMP="./tmp/source"
+  prepare_sources "${TMP}"
+
+  log "Building docker image [${IMAGE_NAME}] and pushing to artifact registry [${ARTIFACT_REGISTRY}]..."
+  gcloud builds submit "${TMP}" --tag "${ARTIFACT_REGISTRY}/${IMAGE_NAME}"
 }
 
 #############################################
@@ -400,15 +417,6 @@ create_serverless_connector() {
     --network "${VPC_NAME}" \
     --region "${REGION}" \
     --range "10.1.0.0/28"
-}
-
-#############################################
-# Create bucket for static content
-#############################################
-create_static_bucket() {
-  if ! gsutil ls "gs://${BUCKET_NAME}"; then
-    gsutil mb "gs://${BUCKET_NAME}"
-  fi
 }
 
 #############################################
@@ -501,4 +509,119 @@ create_iap() {
     --service "${BACKEND}" \
     --member "domain:${ORG_DOMAIN}" \
     --role='roles/iap.httpsResourceAccessor'
+}
+
+#############################################
+# Grant IAM roles to chat service account
+#############################################
+define_chat_svc_sa() {
+  local CHAT_SVC_SA_ROLES=(
+    roles/datastore.user
+  )
+
+  create_sa "${CHAT_SVC_NAME}"
+  local CHAT_SVC_EMAIL="${CHAT_SVC_NAME}-sa@${PROJECT_ID}.iam.gserviceaccount.com"
+
+  for role in "${CHAT_SVC_SA_ROLES[@]}"; do
+    log "Applying [${role}] to [${CHAT_SVC_EMAIL}]..."
+    gcloud -q projects add-iam-policy-binding "${PROJECT_ID}" \
+      --member="serviceAccount:${CHAT_SVC_EMAIL}" --role="${role}" &>/dev/null
+  done
+}
+
+#############################################
+# Grant IAM roles to resume service account
+#############################################
+define_resume_svc_sa() {
+  create_sa "${RESUME_SVC_NAME}"
+  local RESUME_SVC_EMAIL="${RESUME_SVC_NAME}-sa@${PROJECT_ID}.iam.gserviceaccount.com"
+
+  log "Granting GCS admin role to [${RESUME_SVC_EMAIL}] on bucket [${EMBEDDINGS_BUCKET_NAME}]..."
+  gsutil iam ch "serviceAccount:${RESUME_SVC_EMAIL}:roles/storage.admin" "gs://${EMBEDDINGS_BUCKET_NAME}"
+
+  log "Granting GCS admin role to [${RESUME_SVC_EMAIL}] on bucket [${RESUME_BUCKET_NAME}]..."
+  gsutil iam ch "serviceAccount:${RESUME_SVC_EMAIL}:roles/storage.objectViewer" "gs://${RESUME_BUCKET_NAME}"
+}
+
+#############################################
+# Enable GCP APIs
+#############################################
+enable_apis() {
+  log "Enable required GCP services..."
+  gcloud services enable \
+    appengine.googleapis.com \
+    artifactregistry.googleapis.com \
+    cloudbuild.googleapis.com \
+    cloudidentity.googleapis.com \
+    cloudresourcemanager.googleapis.com \
+    eventarc.googleapis.com \
+    eventarcpublishing.googleapis.com \
+    firestore.googleapis.com \
+    logging.googleapis.com \
+    run.googleapis.com \
+    storage.googleapis.com
+
+  if [[ "${ENABLE_IAP}" == "true" ]]; then
+    gcloud services enable \
+      certificatemanager.googleapis.com \
+      compute.googleapis.com \
+      iap.googleapis.com \
+      vpcaccess.googleapis.com
+  fi
+}
+
+#############################################
+# Create a GCS bucket for resume storage
+#############################################
+create_resume_bucket() {
+  if ! gsutil ls "gs://${RESUME_BUCKET_NAME}" &>/dev/null; then
+    log "Creating GCS bucket for resume storage..."
+    gsutil mb -p "${PROJECT_ID}" -c regional -l "${REGION}" "gs://${RESUME_BUCKET_NAME}"
+    gsutil cp data/*.pdf "gs://${RESUME_BUCKET_NAME}"
+  else
+    log "GCS bucket for resume storage already exists. Skipping..."
+  fi
+}
+
+#############################################
+# Create a GCS bucket for storing processed embeddings
+#############################################
+create_embeddings_bucket() {
+  if ! gsutil ls "gs://${EMBEDDINGS_BUCKET_NAME}" &>/dev/null; then
+    log "Creating GCS bucket for resume storage..."
+    gsutil mb -p "${PROJECT_ID}" -c regional -l "${REGION}" "gs://${EMBEDDINGS_BUCKET_NAME}"
+  else
+    log "GCS bucket for resume storage already exists. Skipping..."
+  fi
+}
+
+#############################################
+# Create custom Eventarc channel for chat history
+#############################################
+create_eventarc_chat_channel() {
+  log "Creating Eventarc channel..."
+  gcloud eventarc channels create "${CHAT_CHANNEL}" --location "${REGION}"
+}
+
+#############################################
+# Setup needed configuration for resume updates
+#############################################
+setup_resume_updates() {
+  local PROJECT_NUMBER
+  local SERVICE_ACCOUNT
+  PROJECT_NUMBER=$(get_project_number "${PROJECT_ID}")
+
+  # Default compute service account will be used in triggers
+  log "Granting the eventarc.eventReceiver role to the default compute service account..."
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member "serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role roles/eventarc.eventReceiver
+
+  # This is needed for the Eventarc Cloud Storage trigger
+  log "Granting the pubsub.publisher role to the Cloud Storage service account..."
+  SERVICE_ACCOUNT=$(gsutil kms serviceaccount -p "${PROJECT_ID}")
+
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member "serviceAccount:${SERVICE_ACCOUNT}" \
+    --role roles/pubsub.publisher
 }

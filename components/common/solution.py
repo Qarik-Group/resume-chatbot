@@ -13,7 +13,7 @@
 # limitations under the License.
 """Project wide settings and constants."""
 
-from cache import cache, getenv_no_cache
+from common.cache import cache, getenv_no_cache
 
 
 @cache

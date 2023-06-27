@@ -1,31 +1,13 @@
-data/*
-!data/*Kharkovski*.pdf
-!data/Steven Kim*.pdf
-
-# Environments
-**/.env
-
-# Misc
-**/.idea
-**/.vscode
-**/*.code-workspace
-**/.secrets
-**/*.log
-**/tmp
-**/package-lock.json
-
 # Byte-compiled / optimized / DLL files
 **/__pycache__/
 **/*.py[cod]
 **/*$py.class
-**/.mypy_cache/
 
 # C extensions
 **/*.so
 
 # Distribution / packaging
 **/.Python
-**/.DS_Store
 **/build/
 **/develop-eggs/
 **/dist/

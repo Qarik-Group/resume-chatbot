@@ -18,9 +18,7 @@ import threading
 from pathlib import Path
 from typing import Any, List
 
-import constants
 import llama_index
-import solution
 from langchain import OpenAI
 # from langchain.chat_models import ChatOpenAI
 from langchain.llms.openai import OpenAIChat
@@ -33,19 +31,16 @@ from llama_index.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.query_engine.transform_query_engine import TransformQueryEngine
 from llama_index.selectors.llm_selectors import LLMSingleSelector
 from llama_index.tools.query_engine import QueryEngineTool
-from log import Logger, log
+from common import constants, solution
+from common.log import Logger, log
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
 
 API_KEY = solution.getenv('OPENAI_API_KEY')
-DATA_PATH = Path(solution.getenv('DATA_PATH', './data'))
-INDEX_STORAGE_PATH = Path(f'{DATA_PATH}/storage')
 
 DATA_LOAD_LOCK = threading.Lock()
 """Block many concurrent data loads at once."""
-RESUMES: dict[str, List[Document]] = {}
-"""Global data with resumes."""
 
 
 def get_llm(model_name, temperature, api_key):
@@ -54,34 +49,33 @@ def get_llm(model_name, temperature, api_key):
 
 
 @log
-def load_resumes() -> dict[str, List[Document]]:
+def load_resumes(source_data_dir: str, index_dir: str) -> dict[str, List[Document]]:
     """Initialize list of resumes from index storage or from the directory with PDF source files."""
-    global resumes
+    resumes: dict[str, List[Document]] = {}
+    source_path = Path(source_data_dir)
+    index_path = Path(index_dir)
     global DATA_LOAD_LOCK
     with DATA_LOAD_LOCK:
-        if len(RESUMES):
-            return RESUMES
-
-        if INDEX_STORAGE_PATH.exists():
+        if index_path.exists():
             logger.info('Loading people names (not resumes) from existing index storage...')
-            names = glob.glob(f'{INDEX_STORAGE_PATH}/*',)
+            names = glob.glob(f'{index_path}/*',)
 
             if len(names):
                 for file_name in names:
                     # We do not care about the contents of the resume because it will be loaded from index
                     # All we care for here is the name - aka the Key, not Value
-                    RESUMES[Path(file_name).name] = []
-                return RESUMES
+                    resumes[Path(file_name).name] = []
+                return resumes
             else:
-                logger.warning('No people records found in the index directory: %s', INDEX_STORAGE_PATH)
-                logger.warning('Removing the index storage directory: %s', INDEX_STORAGE_PATH)
-                Path.rmdir(INDEX_STORAGE_PATH)
+                logger.warning('No people records found in the index directory: %s', index_path)
+                logger.warning('Removing the index storage directory: %s', index_path)
+                Path.rmdir(index_path)
 
-        logger.info('Loading resumes from the source dir with PDF files...')
-        Path.mkdir(DATA_PATH, parents=True, exist_ok=True)
+        logger.info('Loading people names from the source dir with PDF files...')
+        Path.mkdir(source_path, parents=True, exist_ok=True)
 
         # Check if there are any pdf files in the data directory
-        pdf_files = glob.glob(f'{DATA_PATH}/*.pdf')
+        pdf_files = glob.glob(f'{source_path}/*.pdf')
 
         if len(pdf_files):
             # Each resume shall be named as '<person_name>.pdf'
@@ -93,20 +87,20 @@ def load_resumes() -> dict[str, List[Document]]:
                 # TODO - not sure if this is needed? Insert metadata
                 for d in resume_content:
                     d.extra_info = {'Person name': person_name}
-                RESUMES[person_name] = resume_content
+                resumes[person_name] = resume_content
         else:
-            logger.warning('No PDF files found in the data directory: %s', DATA_PATH)
+            logger.warning('No PDF files found in the data directory: %s', source_path)
 
-    return RESUMES
+    return resumes
 
 
 @log
 def load_resume_indices(resumes: dict[str, List[Document]],
-                        service_context: ServiceContext) -> dict[str, GPTVectorStoreIndex]:
+                        service_context: ServiceContext, embeddings_dir: str) -> dict[str, GPTVectorStoreIndex]:
     """Load or create index storage contexts for each person in the resumes list."""
     vector_indices = {}
     for person_name, resume_data in resumes.items():
-        cache_file_path = Path(f'./{INDEX_STORAGE_PATH}/{person_name}')
+        cache_file_path = Path(f'./{embeddings_dir}/{person_name}')
         if cache_file_path.exists():
             logger.debug('Loading index from storage file: %s', cache_file_path)
             storage_context = StorageContext.from_defaults(persist_dir=str(cache_file_path))
@@ -138,6 +132,21 @@ def _load_resume_index_summary(resumes: dict[str, Any]) -> dict[str, str]:
                                         f'Use this index if you need to lookup specific facts about {person_name}.\n'
                                         'Do not use this index if you want to analyze multiple people.')
     return index_summaries
+
+
+@log
+def generate_embeddings(source_data_dir: str, embeddings_dir: str) -> None:
+    """Generate embeddings from PDF resumes."""
+    resumes = load_resumes(source_data_dir=source_data_dir, index_dir=embeddings_dir)
+    if not resumes:
+        return None
+
+    llm_predictor = get_llm(
+        model_name=constants.MODEL_NAME, temperature=constants.TEMPERATURE, api_key=API_KEY)
+    service_context = ServiceContext.from_defaults(
+        llm_predictor=llm_predictor, chunk_size_limit=constants.CHUNK_SIZE_LIMIT)
+    vector_indices = load_resume_indices(
+        resumes=resumes, service_context=service_context, embeddings_dir=embeddings_dir)
 
 
 @log
