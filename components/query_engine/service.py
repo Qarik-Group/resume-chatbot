@@ -15,18 +15,19 @@
 
 from typing import Annotated
 
-import api_tools
-import chat_dao
-import llm_tools
-import solution
 from fastapi import Header
 from fastapi.middleware.cors import CORSMiddleware
-from log import Logger, log_params
 from pydantic import BaseModel
+import chat_dao
+from common import api_tools, llm_tools, solution, gcs_tools
+from common.cache import cache
+from common.log import Logger, log_params, log
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
 
+INDEX_BUCKET: str = solution.getenv('EMBEDDINGS_BUCKET_NAME')
+INDEX_DIR: str = 'tmp/embeddings'
 
 app = api_tools.ServiceAPI(title='Resume Chatbot API (experimental)',
                            description='Request / response API for the Resume Chatbot that uses LLM for queries.')
@@ -57,8 +58,9 @@ def ask(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, H
     question = data.question
 
     # TODO: investigate if this may be cached or shared across requests
+    refresh_index()
     logger.debug('Initializing query engine...')
-    query_engine = llm_tools.get_resume_query_engine()
+    query_engine = llm_tools.get_resume_query_engine(index_dir=INDEX_DIR)
     if query_engine is None:
         raise SystemError('No resumes found in the database. Please upload resumes.')
 
@@ -93,7 +95,8 @@ def ask(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, H
 @log_params
 def list_people() -> list[str]:
     """List all people names found in the database of uploaded resumes."""
-    people = llm_tools.load_resumes()
+    refresh_index()
+    people = llm_tools.load_resumes(resume_dir='', index_dir=INDEX_DIR)
     return [person for person in people.keys()]
 
 
@@ -102,3 +105,12 @@ def list_people() -> list[str]:
 def healthcheck() -> dict:
     """Verify that the process is up without testing backend connections."""
     return solution.health_status()
+
+@cache
+@log
+def refresh_index():
+    """Refresh the index of resumes from the database."""
+    logger.info('Refreshing index of resumes...')
+    # TODO - move this to dynamically update
+    gcs_tools.download(bucket_name=INDEX_BUCKET, local_dir=INDEX_DIR)
+

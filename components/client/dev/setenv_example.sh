@@ -12,17 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# shellcheck disable=SC2034
 
-# shellcheck source=/dev/null
-source "../../../setenv.sh"
+log "Running local 'setenv_dev.sh'"
 
-# log "Running in local Python..."
-# cd ..
-# uvicorn service:app --reload --port "${RESUME_MGR_DEV_PORT}"
-
-log "Running in local Docker..."
-podman run --env-file ../../../.env \
-  --env "PORT=${PORT}" \
-  --env "LOG_LEVEL=${LOG_LEVEL}" \
-  -p "${RESUME_MGR_DEV_PORT}:${PORT}" \
-  --rm "${IMAGE_NAME}:dev"
+COMPONENT_NAME="client"
+# shellcheck disable=SC2034
+COMPONENT_DIR="${PROJECT_HOME}/components/${COMPONENT_NAME}"
+LOG_LEVEL=DEBUG
+IMAGE_NAME=${UI_SVC_NAME}-img
+CACHE_TIMEOUT=3600
+PORT=8080
+HOST_PORT=8081
+UI_SVC_DEV_URL="http://127.0.0.1:${UI_SVC_DEV_PORT}"

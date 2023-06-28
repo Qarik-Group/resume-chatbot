@@ -56,7 +56,7 @@ def getenv_no_cache(key: str, default: str | None = None) -> str:
     raise ValueError(f'Environment variable "{key}" has not been defined')
 
 
-CACHE_TIMEOUT = int(getenv_no_cache('CACHE_TIMEOUT', f'{constants.MINUTE * 2}'))
+CACHE_TIMEOUT = int(getenv_no_cache('CACHE_TIMEOUT', f'{constants.MINUTE * 1}'))
 """How long to cache results of call to the admin service for configuration state."""
 
 

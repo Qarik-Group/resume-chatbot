@@ -39,10 +39,10 @@ def getenv(key: str, default: str | None = None) -> str:
 #########################################################
 # Project specific settings
 #########################################################
-SW_VERSION: str = getenv('SW_VERSION', '0.1.11')
+SW_VERSION: str = getenv('SW_VERSION', '0.1.12')
 """Version of this project."""
 
-SW_DATE: str = getenv('SW_DATE', 'June 8, 2023')
+SW_DATE: str = getenv('SW_DATE', 'June 27, 2023')
 """Release date of this project."""
 
 RESOURCE_PREFIX: str = getenv('RESOURCE_PREFIX', 'skb')

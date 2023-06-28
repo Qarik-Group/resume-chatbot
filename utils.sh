@@ -330,11 +330,8 @@ prepare_sources() {
 #############################################
 build() {
   local IMAGE_NAME=$1
-  local TMP="./tmp/source"
-  prepare_sources "${TMP}"
-
   log "Building docker image [${IMAGE_NAME}] and pushing to artifact registry [${ARTIFACT_REGISTRY}]..."
-  gcloud builds submit "${TMP}" --tag "${ARTIFACT_REGISTRY}/${IMAGE_NAME}"
+  gcloud builds submit . --tag "${ARTIFACT_REGISTRY}/${IMAGE_NAME}"
 }
 
 #############################################
@@ -527,6 +524,9 @@ define_chat_svc_sa() {
     gcloud -q projects add-iam-policy-binding "${PROJECT_ID}" \
       --member="serviceAccount:${CHAT_SVC_EMAIL}" --role="${role}" &>/dev/null
   done
+
+  log "Granting GCS reader role to [${CHAT_SVC_EMAIL}] on bucket [${EMBEDDINGS_BUCKET_NAME}]..."
+  gsutil iam ch "serviceAccount:${CHAT_SVC_EMAIL}:roles/storage.objectViewer" "gs://${EMBEDDINGS_BUCKET_NAME}"
 }
 
 #############################################
@@ -539,7 +539,7 @@ define_resume_svc_sa() {
   log "Granting GCS admin role to [${RESUME_SVC_EMAIL}] on bucket [${EMBEDDINGS_BUCKET_NAME}]..."
   gsutil iam ch "serviceAccount:${RESUME_SVC_EMAIL}:roles/storage.admin" "gs://${EMBEDDINGS_BUCKET_NAME}"
 
-  log "Granting GCS admin role to [${RESUME_SVC_EMAIL}] on bucket [${RESUME_BUCKET_NAME}]..."
+  log "Granting GCS reader role to [${RESUME_SVC_EMAIL}] on bucket [${RESUME_BUCKET_NAME}]..."
   gsutil iam ch "serviceAccount:${RESUME_SVC_EMAIL}:roles/storage.objectViewer" "gs://${RESUME_BUCKET_NAME}"
 }
 

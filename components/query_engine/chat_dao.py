@@ -16,11 +16,9 @@
 from datetime import datetime
 from typing import Any
 
-import firestore_tools
-import solution
-import constants
+from common import constants, firestore_tools, solution
+from common.log import Logger, log
 from google.cloud import firestore  # type: ignore
-from log import Logger, log
 
 logger = Logger(__name__).get_logger()
 

@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any, List
 
 import llama_index
+from common import constants, solution
+from common.log import Logger, log
 from langchain import OpenAI
 # from langchain.chat_models import ChatOpenAI
 from langchain.llms.openai import OpenAIChat
@@ -31,8 +33,6 @@ from llama_index.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.query_engine.transform_query_engine import TransformQueryEngine
 from llama_index.selectors.llm_selectors import LLMSingleSelector
 from llama_index.tools.query_engine import QueryEngineTool
-from common import constants, solution
-from common.log import Logger, log
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
@@ -49,10 +49,10 @@ def get_llm(model_name, temperature, api_key):
 
 
 @log
-def load_resumes(source_data_dir: str, index_dir: str) -> dict[str, List[Document]]:
+def load_resumes(resume_dir: str, index_dir: str) -> dict[str, List[Document]]:
     """Initialize list of resumes from index storage or from the directory with PDF source files."""
     resumes: dict[str, List[Document]] = {}
-    source_path = Path(source_data_dir)
+    resume_path = Path(resume_dir)
     index_path = Path(index_dir)
     global DATA_LOAD_LOCK
     with DATA_LOAD_LOCK:
@@ -72,10 +72,10 @@ def load_resumes(source_data_dir: str, index_dir: str) -> dict[str, List[Documen
                 Path.rmdir(index_path)
 
         logger.info('Loading people names from the source dir with PDF files...')
-        Path.mkdir(source_path, parents=True, exist_ok=True)
+        Path.mkdir(resume_path, parents=True, exist_ok=True)
 
         # Check if there are any pdf files in the data directory
-        pdf_files = glob.glob(f'{source_path}/*.pdf')
+        pdf_files = glob.glob(f'{resume_path}/*.pdf')
 
         if len(pdf_files):
             # Each resume shall be named as '<person_name>.pdf'
@@ -89,7 +89,7 @@ def load_resumes(source_data_dir: str, index_dir: str) -> dict[str, List[Documen
                     d.extra_info = {'Person name': person_name}
                 resumes[person_name] = resume_content
         else:
-            logger.warning('No PDF files found in the data directory: %s', source_path)
+            logger.warning('No PDF files found in the data directory: %s', resume_path)
 
     return resumes
 
@@ -135,9 +135,9 @@ def _load_resume_index_summary(resumes: dict[str, Any]) -> dict[str, str]:
 
 
 @log
-def generate_embeddings(source_data_dir: str, embeddings_dir: str) -> None:
+def generate_embeddings(resume_dir: str, index_dir: str) -> None:
     """Generate embeddings from PDF resumes."""
-    resumes = load_resumes(source_data_dir=source_data_dir, index_dir=embeddings_dir)
+    resumes = load_resumes(source_data_dir=resume_dir, index_dir=index_dir)
     if not resumes:
         return None
 
@@ -146,22 +146,22 @@ def generate_embeddings(source_data_dir: str, embeddings_dir: str) -> None:
     service_context = ServiceContext.from_defaults(
         llm_predictor=llm_predictor, chunk_size_limit=constants.CHUNK_SIZE_LIMIT)
     vector_indices = load_resume_indices(
-        resumes=resumes, service_context=service_context, embeddings_dir=embeddings_dir)
+        resumes=resumes, service_context=service_context, embeddings_dir=index_dir)
 
 
 @log
-def get_resume_query_engine() -> BaseQueryEngine | None:
+def get_resume_query_engine(index_dir: str) -> BaseQueryEngine | None:
     """Load the index from disk, or build it if it doesn't exist."""
     llm_predictor = get_llm(
         model_name=constants.MODEL_NAME, temperature=constants.TEMPERATURE, api_key=API_KEY)
     service_context = ServiceContext.from_defaults(
         llm_predictor=llm_predictor, chunk_size_limit=constants.CHUNK_SIZE_LIMIT)
 
-    resumes: dict[str, List[Document]] = load_resumes()
+    resumes: dict[str, List[Document]] = load_resumes(resume_dir='', index_dir=index_dir)
     logger.debug('-------------------------- resumes: %s', resumes.keys())
     if not resumes:
         return None
-    vector_indices = load_resume_indices(resumes, service_context)
+    vector_indices = load_resume_indices(resumes, service_context, embeddings_dir=index_dir)
     index_summaries = _load_resume_index_summary(resumes)
 
     graph = ComposableGraph.from_indices(

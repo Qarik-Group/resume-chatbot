@@ -13,15 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -u # Exit if variable is not set
-set -e # Exit if error is detected during pipeline execution
-
-set -o allexport
-
 # shellcheck source=/dev/null
-source "../../../.env"
-# shellcheck source=/dev/null
-source "../.env"
+source "../../../setenv.sh"
 
 # FIRESTORE_EMULATOR_HOST=localhost:8070
 

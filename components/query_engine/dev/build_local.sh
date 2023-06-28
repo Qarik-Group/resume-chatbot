@@ -13,22 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -u # Exit if variable is not set
-set -e # Exit if error is detected during pipeline execution
-
-set -o allexport
-
 # shellcheck source=/dev/null
-source "../../../.env"
-# shellcheck source=/dev/null
-source "../.env"
+source "../../../setenv.sh"
 
-cd ..
-echo "Building docker image for running locally on MacOs..."
-docker build -t "${IMAGE_NAME}" .
+TMP="./tmp/source"
+prepare_sources "${TMP}"
+cd "${TMP}" || exit
+
+log "Building docker image for running locally on MacOs..."
+podman build -t "${IMAGE_NAME}:dev" . --log-level=debug
 
 # Purge all images from local docker registry
-# docker image prune -a -f
+# podman image prune -a -f
 
 # Delete all images from local docker registry
-# docker rmi $(docker images -a -q) -f
+# podman rmi $(docker images -a -q) -f

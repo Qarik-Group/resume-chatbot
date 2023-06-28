@@ -79,6 +79,10 @@ deploy() {
 ###############################################
 # MAIN
 ###############################################
+TMP="./tmp/source"
+prepare_sources "${TMP}"
+pushd "${TMP}" || die "Unable to change directory to [${TMP}]"
 build "${IMAGE_NAME}"
+popd || exit
 deploy
 create_gcs_trigger

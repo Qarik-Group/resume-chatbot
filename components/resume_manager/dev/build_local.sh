@@ -24,7 +24,7 @@ log "Building docker image for running locally on MacOs..."
 podman build -t "${IMAGE_NAME}:dev" . --log-level=debug
 
 # Purge all images from local docker registry
-# docker image prune -a -f
+# podman image prune -a -f
 
 # Delete all images from local docker registry
-# docker rmi $(docker images -a -q) -f
+# podman rmi $(docker images -a -q) -f

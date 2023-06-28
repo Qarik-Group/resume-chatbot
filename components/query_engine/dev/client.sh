@@ -12,20 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-set -u # Exit if variable is not set
-set -e # Exit if error is detected during pipeline execution
-cd ..
-set -o allexport
-# shellcheck source=/dev/null
-source "../../.env"
-# shellcheck source=/dev/null
-source "./.env"
-# shellcheck source=/dev/null
-source "../../utils.sh"
 
-# CHAT_SVC_URL=$(get_svc_url "${CHAT_SVC_NAME}")
-CHAT_SVC_URL="https://34.95.89.166.nip.io"
+# shellcheck source=/dev/null
+source "../../../setenv.sh"
 
-log "CHAT_SVC_URL=${CHAT_SVC_URL}"
-# Get list of people
-gcurl -i "${CHAT_SVC_URL}/people"
+# log "Get list of people..."
+# gcurl -i "${CHAT_SVC_DEV_URL}/people"
+
+log "Ask a question about a person..."
+gcurl -i -X POST \
+  -d "{\"question\":\"Where does Roman Kharkovski live?\"}" \
+  "${CHAT_SVC_DEV_URL}/ask"

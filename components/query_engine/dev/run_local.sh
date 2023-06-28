@@ -16,12 +16,13 @@
 # shellcheck source=/dev/null
 source "../../../setenv.sh"
 
-# log "Running in local Python..."
-# uvicorn service:app --reload --port "${QUERY_ENG_DEV_PORT}"
+log "Running in local Python..."
+cd ..
+uvicorn service:app --reload --port "${QUERY_ENG_DEV_PORT}"
 
-log "Running in local Docker..."
-podman run --env-file ../../../.env \
-  --env "PORT=${PORT}" \
-  --env "LOG_LEVEL=${LOG_LEVEL}" \
-  -p "${QUERY_ENG_DEV_PORT}:${PORT}" \
-  --rm "${IMAGE_NAME}:dev"
+# log "Running in local Docker..."
+# podman run --env-file ../../../.env \
+#   --env "PORT=${PORT}" \
+#   --env "LOG_LEVEL=${LOG_LEVEL}" \
+#   -p "${QUERY_ENG_DEV_PORT}:${PORT}" \
+#   --rm "${IMAGE_NAME}:dev"

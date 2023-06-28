@@ -12,16 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-set -u # Exit if variable is not set
-set -e # Exit if error is detected during pipeline execution
-cd ..
-set -o allexport
+
 # shellcheck source=/dev/null
-source "../../.env"
-# shellcheck source=/dev/null
-source "./.env"
-# shellcheck source=/dev/null
-source "../../utils.sh"
+source "../../../setenv.sh"
 
 #############################################
 # Deploy Cloud Run service
@@ -67,6 +60,7 @@ deploy() {
 ###############################################
 # MAIN
 ###############################################
+cd ..
 build "${IMAGE_NAME}"
 deploy
 if [[ "${ENABLE_IAP}" == "true" ]]; then

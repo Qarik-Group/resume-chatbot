@@ -27,7 +27,6 @@ source "../../../setenv.sh"
 #   --url "${RESUME_MGR_DEV_URL}/resumes"
 
 MSG_FILE="test_gcs_event.json"
-curl -X POST \
+gcurl -X POST \
   -d "@${MSG_FILE}" \
-  -H "Content-Type: application/json" \
   --url "${RESUME_MGR_DEV_URL}/resumes"
