@@ -1,6 +1,10 @@
+data/*
+!data/*Kharkovski*.pdf
+!data/Steven Kim*.pdf
+
 # Environments
 **/.env
-**/setenv.sh
+**/setenv_dev.sh
 
 # Misc
 **/.idea

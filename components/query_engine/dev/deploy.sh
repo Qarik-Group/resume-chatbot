@@ -22,13 +22,23 @@ source "../../../setenv.sh"
 deploy() {
   ARGS=(
     --image "${ARTIFACT_REGISTRY}/${IMAGE_NAME}"
-    --service-account "${UI_SVC_NAME}-sa@${PROJECT_ID}.iam.gserviceaccount.com"
+    --service-account "${CHAT_SVC_NAME}-sa@${PROJECT_ID}.iam.gserviceaccount.com"
     --region "${REGION}"
     --project "${PROJECT_ID}"
+    --set-env-vars "OPENAI_API_KEY=${OPENAI_API_KEY}"
+    --set-env-vars "EMBEDDINGS_BUCKET_NAME=${EMBEDDINGS_BUCKET_NAME}"
+    --set-env-vars "PROJECT_ID=${PROJECT_ID}"
+    --set-env-vars "LOG_LEVEL=DEBUG"
     --allow-unauthenticated
   )
+  # --ingress all
+  # The lines below only needed if using Serverless VPC Connector
+  # --vpc-egress all-traffic
+  # --vpc-connector "projects/${PROJECT_ID}/locations/${REGION}/connectors/${VPC_CONNECTOR_NAME}" \
 
   if [[ "${ENABLE_IAP}" == "true" ]]; then
+    # TODO: In some cases when the CLoud Run scales down to 0, the IAP has trouble waiking it up
+    ARGS+=(--min-instances 0)
     ARGS+=(--ingress internal-and-cloud-load-balancing)
   else
     ARGS+=(--ingress all)
@@ -36,7 +46,7 @@ deploy() {
 
   log "Deploying Cloud Run service [${CHAT_SVC_NAME}]..."
   set -o xtrace
-  gcloud run deploy "${UI_SVC_NAME}" "${ARGS[@]}"
+  gcloud run deploy "${CHAT_SVC_NAME}" "${ARGS[@]}"
   set +o xtrace
 
   local PROJECT_NUMBER
@@ -44,25 +54,28 @@ deploy() {
 
   if [[ "${ENABLE_IAP}" == "true" ]]; then
     log "Granting invoker role to IAP service..."
-    gcloud run services add-iam-policy-binding "${UI_SVC_NAME}" \
+    gcloud run services add-iam-policy-binding "${CHAT_SVC_NAME}" \
       --member "serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com" \
       --region "${REGION}" \
       --role "roles/run.invoker"
   fi
 
   log "Granting invoker role to domain users..."
-  gcloud run services add-iam-policy-binding "${UI_SVC_NAME}" \
-    --member "domain:${ORG_DOMAIN}" \
+  gcloud run services add-iam-policy-binding "${CHAT_SVC_NAME}" \
     --region "${REGION}" \
+    --member "domain:${ORG_DOMAIN}" \
     --role "roles/run.invoker"
 }
 
 ###############################################
 # MAIN
 ###############################################
-cd ..
+TMP="./tmp/source"
+prepare_sources "${TMP}"
+pushd "${TMP}" || die
 build "${IMAGE_NAME}"
+popd || die
 deploy
 if [[ "${ENABLE_IAP}" == "true" ]]; then
-  create_iap "${UI_SVC_NAME}"
+  create_iap "${CHAT_SVC_NAME}"
 fi

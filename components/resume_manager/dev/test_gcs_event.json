@@ -1,0 +1,20 @@
+{
+  "kind": "storage#object",
+  "id": "resume-originals-skills-bot-dev/Roman Kharkovski resume.pdf/1687878311108598",
+  "selfLink": "https://www.googleapis.com/storage/v1/b/resume-originals-skills-bot-dev/o/Roman%20Kharkovski%20resume.pdf",
+  "name": "Roman Kharkovski resume.pdf",
+  "bucket": "resume-originals-skills-bot-dev",
+  "generation": "1687878311108598",
+  "metageneration": "1",
+  "contentType": "application/pdf",
+  "timeCreated": "2023-06-27T15:05:11.118Z",
+  "updated": "2023-06-27T15:05:11.118Z",
+  "storageClass": "REGIONAL",
+  "timeStorageClassUpdated": "2023-06-27T15:05:11.118Z",
+  "size": "100393",
+  "md5Hash": "v18DacEfX635vxTJpTqlBw==",
+  "mediaLink": "https://storage.googleapis.com/download/storage/v1/b/resume-originals-skills-bot-dev/o/Roman%20Kharkovski%20resume.pdf?generation=1687878311108598&alt=media",
+  "contentLanguage": "en",
+  "crc32c": "Tq9qGg==",
+  "etag": "CPa/odnc4/8CEAE="
+}

@@ -16,12 +16,13 @@
 # shellcheck source=/dev/null
 source "../../../setenv.sh"
 
+log "Running in local Python..."
 cd ..
-echo "Building docker image for running locally on MacOs..."
-docker build -t "${IMAGE_NAME}" .
+uvicorn service:app --reload --port "${QUERY_ENG_DEV_PORT}"
 
-# Purge all images from local docker registry
-# docker image prune -a -f
-
-# Delete all images from local docker registry
-# docker rmi $(docker images -a -q) -f
+# log "Running in local Docker..."
+# podman run --env-file ../../../.env \
+#   --env "PORT=${PORT}" \
+#   --env "LOG_LEVEL=${LOG_LEVEL}" \
+#   -p "${QUERY_ENG_DEV_PORT}:${PORT}" \
+#   --rm "${IMAGE_NAME}:dev"

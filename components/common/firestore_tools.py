@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # Copyright 2023 Qarik Group, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Set of utility functions to work with Firestore."""
 
-# shellcheck source=/dev/null
-source "../../../setenv.sh"
+import os
 
-cd ..
-echo "Building docker image for running locally on MacOs..."
-docker build -t "${IMAGE_NAME}" .
+from google.cloud import firestore  # type: ignore
+from common import solution
+from common.log import Logger, log
 
-# Purge all images from local docker registry
-# docker image prune -a -f
+logger = Logger(__name__).get_logger()
 
-# Delete all images from local docker registry
-# docker rmi $(docker images -a -q) -f
+
+@log
+def create_firestore_client():
+    """Set up Firestore client."""
+    if os.environ.get('FIRESTORE_EMULATOR_HOST'):
+        from google.auth.credentials import AnonymousCredentials
+        return firestore.Client(project=solution.getenv('PROJECT_ID'), credentials=AnonymousCredentials())
+    else:
+        return firestore.Client()

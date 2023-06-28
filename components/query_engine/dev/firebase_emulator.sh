@@ -16,12 +16,7 @@
 # shellcheck source=/dev/null
 source "../../../setenv.sh"
 
-cd ..
-echo "Building docker image for running locally on MacOs..."
-docker build -t "${IMAGE_NAME}" .
+# FIRESTORE_EMULATOR_HOST=localhost:8070
 
-# Purge all images from local docker registry
-# docker image prune -a -f
-
-# Delete all images from local docker registry
-# docker rmi $(docker images -a -q) -f
+# See additional details here: https://firebase.google.com/docs/emulator-suite/install_and_configure
+firebase emulators:start --only firestore --project "${PROJECT_ID}"

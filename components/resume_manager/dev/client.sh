@@ -16,12 +16,17 @@
 # shellcheck source=/dev/null
 source "../../../setenv.sh"
 
-cd ..
-echo "Building docker image for running locally on MacOs..."
-docker build -t "${IMAGE_NAME}" .
+# curl --url "${RESUME_MGR_DEV_URL}/health"
 
-# Purge all images from local docker registry
-# docker image prune -a -f
+# curl -X POST \
+#   --url "${RESUME_MGR_DEV_URL}/resumes"
 
-# Delete all images from local docker registry
-# docker rmi $(docker images -a -q) -f
+# curl -X POST \
+#   -d "{\"aa\":\"bb\"}" \
+#   -H "Content-Type: application/json" \
+#   --url "${RESUME_MGR_DEV_URL}/resumes"
+
+MSG_FILE="test_gcs_event.json"
+gcurl -X POST \
+  -d "@${MSG_FILE}" \
+  --url "${RESUME_MGR_DEV_URL}/resumes"

@@ -16,12 +16,10 @@
 # shellcheck source=/dev/null
 source "../../../setenv.sh"
 
-cd ..
-echo "Building docker image for running locally on MacOs..."
-docker build -t "${IMAGE_NAME}" .
+# log "Get list of people..."
+# gcurl -i "${CHAT_SVC_DEV_URL}/people"
 
-# Purge all images from local docker registry
-# docker image prune -a -f
-
-# Delete all images from local docker registry
-# docker rmi $(docker images -a -q) -f
+log "Ask a question about a person..."
+gcurl -i -X POST \
+  -d "{\"question\":\"Where does Roman Kharkovski live?\"}" \
+  "${CHAT_SVC_DEV_URL}/ask"

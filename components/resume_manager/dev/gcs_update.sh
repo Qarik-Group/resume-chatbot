@@ -16,12 +16,6 @@
 # shellcheck source=/dev/null
 source "../../../setenv.sh"
 
-cd ..
-echo "Building docker image for running locally on MacOs..."
-docker build -t "${IMAGE_NAME}" .
-
-# Purge all images from local docker registry
-# docker image prune -a -f
-
-# Delete all images from local docker registry
-# docker rmi $(docker images -a -q) -f
+gsutil cp ../../../data/Roman*.pdf "gs://${RESUME_BUCKET_NAME}"
+# gsutil cp ../../../data/*Kharkovski*.pdf "gs://${RESUME_BUCKET_NAME}"
+# gsutil cp ../../../data/*Kim*.pdf "gs://${RESUME_BUCKET_NAME}"

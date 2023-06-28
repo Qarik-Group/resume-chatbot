@@ -1,0 +1,6 @@
+llama-index==0.6.21.post1
+Pillow==9.5.0
+pypdf==3.9.1
+nltk==3.8.1
+google-cloud-firestore==2.11.1
+fastapi==0.96.0

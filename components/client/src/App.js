@@ -49,11 +49,12 @@ const AppBarSpacer = styled("div")(({ theme }) => theme.mixins.toolbar);
 // eslint-disable-next-line no-unused-vars
 const localHostBackend = "http://127.0.0.1:8000";
 // eslint-disable-next-line no-unused-vars
-const cloudRunBackend = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
+// const cloudRunBackend = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
+const cloudRunBackend = "https://skillsbot-backend-l5ej3633iq-uc.a.run.app";
 // eslint-disable-next-line no-unused-vars
 const iapBackend = "https://34.95.89.166.nip.io";
 // Which backend URL to use as the default value
-const defaultBackendUrl = iapBackend;
+const defaultBackendUrl = cloudRunBackend;
 
 let userName = null;
 const fakeIdToken = "fakeIdToken";
@@ -285,8 +286,8 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
       setErrorMessage(`Error occurred while fetching answer: ${error}`);
     }
 
-    // Reset the question field to be empty
-    setQuestion("");
+    // Reset the question field to be empty - or comment this out to leave it with the previous question
+    // setQuestion("");
     setIsLoading(false);
   };
 
