@@ -13,23 +13,28 @@
 # limitations under the License.
 FROM python:3.11.0-slim
 
+ENV COMPONENT_NAME="query_engine"
 ENV RUN_FILE="service"
 ENV APP_USER="user1"
+ENV PATH="/home/$APP_USER/.local/bin:$PATH"
+ENV BASE_DIR="/app"
+# Allow statements and log messages to immediately appear in the Cloud Run logs
+ENV PYTHONUNBUFFERED True
 
 # Create group:user to run the application
 RUN groupadd -g 6006 $APP_USER && useradd -m -r -u 6006 -g $APP_USER $APP_USER
+
+RUN mkdir -p $BASE_DIR/$COMPONENT_NAME
+RUN chown $APP_USER $BASE_DIR
 USER $APP_USER
+WORKDIR $BASE_DIR/$COMPONENT_NAME
 
-# Allow statements and log messages to immediately appear in the Cloud Run logs
-ENV PYTHONUNBUFFERED True
-ENV PATH="/home/$APP_USER/.local/bin:$PATH"
-ENV BASE_DIR="/app"
-WORKDIR $BASE_DIR
-
-ADD --chown=$APP_USER:$APP_USER ./requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+ADD ./common/requirements.txt ./common/
+ADD ./requirements.txt ./
+RUN pip install -r requirements.txt -r ./common/requirements.txt
 # Files below change more often, hence we copy them last
-ADD --chown=$APP_USER:$APP_USER . ./
+ADD ./common/*.py ./common/
+ADD ./*.py ./
 
 # Run the web service on container startup.
 # Timeout is set to 0 to disable the timeouts of the workers to allow Cloud Run to handle instance scaling.

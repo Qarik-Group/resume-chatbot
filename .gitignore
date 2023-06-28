@@ -4,6 +4,7 @@ data/*
 
 # Environments
 **/.env
+**/setenv_dev.sh
 
 # Misc
 **/.idea

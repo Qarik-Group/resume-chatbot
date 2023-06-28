@@ -13,20 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -u # Exit if variable is not set
-set -e # Exit if error is detected during pipeline execution
-
-set -o allexport
-
 # shellcheck source=/dev/null
-source "../../../.env"
-# shellcheck source=/dev/null
-source "../.env"
+source "../../../setenv.sh"
 
-cd ..
+# log "Running in local Python..."
+# uvicorn service:app --reload --port "${QUERY_ENG_DEV_PORT}"
 
-# Run in local Python
-uvicorn service:app --reload
-
-# Or alternatively run in local Docker
-# docker run --env-file .env --env-file ../../.env -p "${HOST_PORT}:${PORT}" --rm "${IMAGE_NAME}"
+log "Running in local Docker..."
+podman run --env-file ../../../.env \
+  --env "PORT=${PORT}" \
+  --env "LOG_LEVEL=${LOG_LEVEL}" \
+  -p "${QUERY_ENG_DEV_PORT}:${PORT}" \
+  --rm "${IMAGE_NAME}:dev"

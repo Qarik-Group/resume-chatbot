@@ -16,6 +16,6 @@
 # shellcheck source=/dev/null
 source "../../../setenv.sh"
 
-# gsutil cp ../../../data/Roman*.pdf "gs://${RESUME_BUCKET_NAME}"
+gsutil cp ../../../data/Roman*.pdf "gs://${RESUME_BUCKET_NAME}"
 # gsutil cp ../../../data/*Kharkovski*.pdf "gs://${RESUME_BUCKET_NAME}"
-gsutil cp ../../../data/Steven Kim*.pdf "gs://${RESUME_BUCKET_NAME}"
+# gsutil cp ../../../data/*Kim*.pdf "gs://${RESUME_BUCKET_NAME}"

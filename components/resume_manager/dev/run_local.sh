@@ -20,4 +20,8 @@ source "../../../setenv.sh"
 # uvicorn service:app --reload --port "${RESUME_MGR_DEV_PORT}"
 
 log "Running in local Docker..."
-podman run --env-file ../../../.env --env "PORT=${PORT}" --env "LOG_LEVEL=${LOG_LEVEL}" -p "${RESUME_MGR_DEV_PORT}:${PORT}" --rm "${IMAGE_NAME}:dev"
+podman run --env-file ../../../.env \
+  --env "PORT=${PORT}" \
+  --env "LOG_LEVEL=${LOG_LEVEL}" \
+  -p "${RESUME_MGR_DEV_PORT}:${PORT}" \
+  --rm "${IMAGE_NAME}:dev"

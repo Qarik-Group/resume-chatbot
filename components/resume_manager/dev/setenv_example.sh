@@ -14,6 +14,8 @@
 # limitations under the License.
 # shellcheck disable=SC2034
 
+log "Running local 'setenv_dev.sh'"
+
 COMPONENT_NAME="resume_manager"
 # shellcheck disable=SC2034
 COMPONENT_DIR="${PROJECT_HOME}/components/${COMPONENT_NAME}"
@@ -22,3 +24,4 @@ IMAGE_NAME=${RESUME_SVC_NAME}-img
 CACHE_TIMEOUT=3600
 PORT=8080
 RESUME_MGR_DEV_URL="http://127.0.0.1:${RESUME_MGR_DEV_PORT}"
+# RESUME_MGR_DEV_URL=$(get_svc_url "${RESUME_SVC_NAME}")
