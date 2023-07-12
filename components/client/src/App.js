@@ -47,14 +47,14 @@ const Main = styled("main")(({ theme }) => ({
 const AppBarSpacer = styled("div")(({ theme }) => theme.mixins.toolbar);
 
 // eslint-disable-next-line no-unused-vars
-const localHostBackend = "http://127.0.0.1:8000";
+const localHostBackend = "http://127.0.0.1:5002";
 // eslint-disable-next-line no-unused-vars
 // const cloudRunBackend = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
 const cloudRunBackend = "https://skillsbot-backend-l5ej3633iq-uc.a.run.app";
 // eslint-disable-next-line no-unused-vars
 const iapBackend = "https://34.95.89.166.nip.io";
 // Which backend URL to use as the default value
-const defaultBackendUrl = cloudRunBackend;
+const defaultBackendUrl = localHostBackend;
 
 let userName = null;
 const fakeIdToken = "fakeIdToken";
@@ -246,27 +246,25 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
   const [question, setQuestion] = useState("");
   const [isGptLoading, setIsGptLoading] = useState(false);
   const [isGoogLoading, setIsGoogLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const answerPrefixGpt = "ChatGPT";
-  const answerPrefixGoog = "Google";
+  const [gptErrorMessage, setGptErrorMessage] = useState("");
+  const [googErrorMessage, setGoogErrorMessage] = useState("");
+  const answerPrefixGpt = "Open AI";
+  const answerPrefixGoog = "Google AI";
 
   const handleChange = (event) => {
     setQuestion(event.target.value);
   };
 
-  const handleSubmit = async (event) => {
+  const callBackend = async (event, url, errorHandler, answerPrefix, isLoading) => {
     event.preventDefault();
-    setIsGptLoading(true);
-    addMessage({ sender: userName, text: question });
-
     try {
-      const response = await fetch(`${backendUrl}/ask_gpt`, {
+      isLoading(true);
+      const response = await fetch(url, {
         method: "POST",
         credentials: idToken === fakeIdToken ? "omit" : "include",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
-          // Accept: "application/json",
           Accept: "application/json, text/plain, */*",
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Credentials": true,
@@ -274,24 +272,32 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         body: JSON.stringify({ question: question }),
       });
 
+      isLoading(false);
       if (response.ok) {
         const data = await response.json();
         const answer = data.answer;
-
         // Add the server's response to the chat history
-        addMessage({ sender: answerPrefixGpt, text: answer });
+        addMessage({ sender: answerPrefix, text: answer });
       } else {
-        console.error("Error occurred while fetching answer:", response.status);
-        setErrorMessage(`Error occurred while fetching answer: ${response}`);
+        const error = await response.json();
+        console.error(
+          `Error parsing response from: ${url}, status: ${response.status}, statusText: ${response.statusText}, response: ${error}`
+        );
+        errorHandler(`Error parsing response from ${url}: ${JSON.stringify(response)}`);
       }
     } catch (error) {
-      console.error("Error occurred while fetching answer:", error);
-      setErrorMessage(`Error occurred while fetching answer: ${error}`);
+      console.error(`Error occurred while fetching answer from ${url}:`, error);
+      errorHandler(`Error occurred while fetching answer from ${url}: ${error}`);
     }
+  };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    addMessage({ sender: userName, text: question });
+    callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
+    callBackend(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
     // Reset the question field to be empty - or comment this out to leave it with the previous question
     // setQuestion("");
-    setIsGptLoading(false);
   };
 
   return (
@@ -345,9 +351,27 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
-      {errorMessage && (
+      {isGoogLoading && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "50px",
+          }}
+        >
+          <Typography variant="body1">Processing request for Google...</Typography>
+          <CircularProgress sx={{ marginRight: "8px" }} />
+        </Box>
+      )}
+      {gptErrorMessage && (
         <Alert severity="error" sx={{ marginTop: 2 }}>
-          {errorMessage}
+          {gptErrorMessage}
+        </Alert>
+      )}
+      {googErrorMessage && (
+        <Alert severity="error" sx={{ marginTop: 2 }}>
+          {googErrorMessage}
         </Alert>
       )}
       <Typography height={15}></Typography>
@@ -421,7 +445,7 @@ function Help() {
         <Typography variant="h5">How do I submit feature requests and file bugs?</Typography>
         <Typography height={15}></Typography>
         <Typography>
-          If you found a bug, or have any ideas on how to improve this tool, please open an issue using project's
+          If you found a bug, or have any ideas on how to improve this tool, please open an issue using project's{" "}
           <a href="https://github.com/Qarik-Group/resume-chatbot/issues">GitHub Issues</a> page.
         </Typography>
       </Box>

@@ -93,13 +93,13 @@ def ask_gpt(data: AskInput, x_goog_authenticated_user_email: Annotated[str | Non
     return {'answer': str(answer)}
 
 
-@app.post('/ask_goog')
+@app.post('/ask_google')
 @log_params
-def ask_goog(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+def ask_google(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
     """Ask a question to the Google model and return the answer."""
     question = data.question
 
-    return {'answer': 'Not implemented yet'}
+    return {'answer': f'Not implemented. Original question: {question} from user: {x_goog_authenticated_user_email}'}
 
 
 @app.get('/people')
