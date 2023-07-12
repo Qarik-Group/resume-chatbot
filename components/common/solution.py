@@ -13,6 +13,8 @@
 # limitations under the License.
 """Project wide settings and constants."""
 
+from datetime import datetime
+from common import constants
 from common.cache import cache, getenv_no_cache
 
 
@@ -39,14 +41,17 @@ def getenv(key: str, default: str | None = None) -> str:
 #########################################################
 # Project specific settings
 #########################################################
-SW_VERSION: str = getenv('SW_VERSION', '0.1.12')
+SW_VERSION: str = getenv('SW_VERSION', '0.1.13')
 """Version of this project."""
 
-SW_DATE: str = getenv('SW_DATE', 'June 27, 2023')
+SW_DATE: str = getenv('SW_DATE', 'July 11, 2023')
 """Release date of this project."""
 
 RESOURCE_PREFIX: str = getenv('RESOURCE_PREFIX', 'skb')
 """Added to resource names so that in GCP Console it is easy to see what relates to this solution vs other resources."""
+
+PROJECT_ID: str = getenv('PROJECT_ID')
+"""Name of the GCP project where this code runs."""
 
 license_info = {
     'name': 'Apache 2.0',
@@ -79,3 +84,8 @@ def health_status() -> dict:
         'version': SW_VERSION,
         'releaseDate': SW_DATE,
     }
+
+
+def now() -> datetime:
+    """Return current timestamp in UTC timezone."""
+    return datetime.now(tz=constants.TIMEZONE)

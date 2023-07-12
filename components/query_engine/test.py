@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import llm_tools
-from log import Logger, log
+from common import llm_tools
+from common.log import Logger, log
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
@@ -23,12 +23,17 @@ logger.info('Initializing...')
 def test_queries(query_engine) -> None:
     """Test sample queries."""
     queries = [
-        'What are the main skills for Roman Kharkovski?', 'Does Roman Kharkovski have Java skills?',
-        'Compare and contrast the skills of Roman Kharkovski and Steven Kim.', 'List all people with Java skills. ',
-        'Do any people have SAP or COBOL skills?', 'When did Roman Kharkovski start working for Google?',
-        'What is the most common skill among all people?', 'Tell me about Roman Kharkovski strengths and weaknesses?',
-        'Among all people, who has the most experience with Java, Google Cloud, and Kubernetes?',
-        'How many people have skills in Python and Machine Learning?', 'Where did Roman Kharkovski work the longest?'
+        'What are the main skills for Roman Kharkovski?',
+        # 'Does Roman Kharkovski have Java skills?',
+        # 'Compare and contrast the skills of Roman Kharkovski and Steven Kim.',
+        # 'List all people with Java skills. ',
+        # 'Do any people have SAP or COBOL skills?',
+        # 'When did Roman Kharkovski start working for Google?',
+        # 'What is the most common skill among all people?',
+        # 'Tell me about Roman Kharkovski strengths and weaknesses?',
+        # 'Among all people, who has the most experience with Java, Google Cloud, and Kubernetes?',
+        # 'How many people have skills in Python and Machine Learning?',
+        # 'Where did Roman Kharkovski work the longest?'
     ]
 
     responses = []
@@ -45,19 +50,30 @@ def test_queries(query_engine) -> None:
             error_count += 1
             errors.append((query, str(e)))
 
-    print('******************************************************************************* Responses that succeeded:')
+    print('\x1b[0;30;42m')
+    print('------------------------------')
+    print('  Responses that succeeded:')
+    print('------------------------------')
+    print('\x1b[0;37;42m')
     for response in responses:
         print('*******************************************************************************')
         print(f'> QUERY: {response[0]} \n> RESPONSE: {response[1]}')
 
-    print('******************************************************************************* Responses with errors:')
+    print('\x1b[0;30;41m')
+    print('------------------------------')
+    print('  Responses that failed:')
+    print('------------------------------')
+    print('\x1b[0;37;41m')
     for error in errors:
         print('*******************************************************************************')
         print(f'> QUERY: {error[0]} \n> RESPONSE: {error[1]}')
 
+    print('\x1b[0;30;40m')
     print('*******************************************************************************')
     print(f'Total questions: {len(queries)}\nErrors: {error_count}')
     print('*******************************************************************************')
+    # Reset colors
+    print('\x1b[0m')
 
 
 @log
@@ -68,7 +84,7 @@ def main():
     print('********************** Testing Skills Query Bot *************************')
     print('*************************************************************************')
 
-    query_engine = llm_tools.get_resume_query_engine()
+    query_engine = llm_tools.get_resume_query_engine(index_dir='tmp/embeddings', resume_dir='dev/tmp/resumes')
 
     if query_engine is None:
         logger.error('No resumes found in the database. Please upload resumes or connect to the database.')

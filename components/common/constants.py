@@ -51,10 +51,9 @@ TIMEZONE: timezone = timezone.utc
 #########################################################
 # LLM specific settings
 #########################################################
-MODEL_NAME = 'gpt-3.5-turbo'
+# MODEL_NAME = 'gpt-3.5-turbo'
+MODEL_NAME = 'gpt-4'
 """LLM model name to be used."""
-# MODEL_NAME = 'gpt-4'
-# gpt-4 model is not yet available via API, only via ChatGPT+
 
 MAX_KEYWORDS_PER_CHUNK = 100
 """Maximum number of keywords per chunk for Complex Query Graph."""

@@ -20,10 +20,9 @@ from typing import Any, List
 
 import llama_index
 from common import constants, solution
-from common.log import Logger, log
-from langchain import OpenAI
-# from langchain.chat_models import ChatOpenAI
-from langchain.llms.openai import OpenAIChat
+from common.log import Logger, log, log_params
+from langchain.chat_models import ChatOpenAI
+# from langchain.llms.openai import OpenAIChat
 from llama_index import (Document, GPTSimpleKeywordTableIndex, GPTVectorStoreIndex, ServiceContext,
                          SimpleDirectoryReader, StorageContext, load_index_from_storage)
 from llama_index.indices.composability import ComposableGraph
@@ -43,15 +42,19 @@ DATA_LOAD_LOCK = threading.Lock()
 """Block many concurrent data loads at once."""
 
 
+@log_params
 def get_llm(model_name, temperature, api_key):
-    llm = OpenAIChat(temperature=temperature, model_name=model_name, openai_api_key=api_key)
+    # llm = OpenAIChat(temperature=temperature, model_name=model_name, openai_api_key=api_key)
+    llm = ChatOpenAI(model_name=model_name, openai_api_key=api_key, temperature=temperature)
     return llama_index.LLMPredictor(llm=llm)
 
 
-@log
-def load_resumes(resume_dir: str, index_dir: str) -> dict[str, List[Document]]:
+@log_params
+def load_resumes(resume_dir: str | None, index_dir: str) -> dict[str, List[Document]]:
     """Initialize list of resumes from index storage or from the directory with PDF source files."""
     resumes: dict[str, List[Document]] = {}
+    if resume_dir is None:
+        resume_dir = ''
     resume_path = Path(resume_dir)
     index_path = Path(index_dir)
     global DATA_LOAD_LOCK
@@ -85,8 +88,8 @@ def load_resumes(resume_dir: str, index_dir: str) -> dict[str, List[Document]]:
                 logger.debug(f'Loading: {person_name}')
                 resume_content = SimpleDirectoryReader(input_files=[resume]).load_data()
                 # TODO - not sure if this is needed? Insert metadata
-                for d in resume_content:
-                    d.extra_info = {'Person name': person_name}
+                # for d in resume_content:
+                #     d.extra_info = {'Person name': person_name}
                 resumes[person_name] = resume_content
         else:
             logger.warning('No PDF files found in the data directory: %s', resume_path)
@@ -134,7 +137,7 @@ def _load_resume_index_summary(resumes: dict[str, Any]) -> dict[str, str]:
     return index_summaries
 
 
-@log
+@log_params
 def generate_embeddings(resume_dir: str, index_dir: str) -> None:
     """Generate embeddings from PDF resumes."""
     resumes = load_resumes(source_data_dir=resume_dir, index_dir=index_dir)
@@ -149,15 +152,15 @@ def generate_embeddings(resume_dir: str, index_dir: str) -> None:
         resumes=resumes, service_context=service_context, embeddings_dir=index_dir)
 
 
-@log
-def get_resume_query_engine(index_dir: str) -> BaseQueryEngine | None:
+@log_params
+def get_resume_query_engine(index_dir: str, resume_dir: str | None = None) -> BaseQueryEngine | None:
     """Load the index from disk, or build it if it doesn't exist."""
     llm_predictor = get_llm(
         model_name=constants.MODEL_NAME, temperature=constants.TEMPERATURE, api_key=API_KEY)
     service_context = ServiceContext.from_defaults(
         llm_predictor=llm_predictor, chunk_size_limit=constants.CHUNK_SIZE_LIMIT)
 
-    resumes: dict[str, List[Document]] = load_resumes(resume_dir='', index_dir=index_dir)
+    resumes: dict[str, List[Document]] = load_resumes(resume_dir=resume_dir, index_dir=index_dir)
     logger.debug('-------------------------- resumes: %s', resumes.keys())
     if not resumes:
         return None
@@ -183,7 +186,7 @@ def get_resume_query_engine(index_dir: str) -> BaseQueryEngine | None:
         query_engine = TransformQueryEngine(
             query_engine,
             query_transform=decompose_transform,
-            transform_extra_info={'index_summary': index.index_struct.summary},
+            transform_metadata={'index_summary': index.index_struct.summary},
         )
         custom_query_engines[index.index_id] = query_engine
 

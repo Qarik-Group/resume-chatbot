@@ -14,12 +14,12 @@
 """Main API service that handles REST API calls to LLM and is run on server."""
 
 from typing import Annotated
-
+from datetime import datetime
 from fastapi import Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import chat_dao
-from common import api_tools, llm_tools, solution, gcs_tools
+from common import api_tools, llm_tools, solution, gcs_tools, admin_dao
 from common.cache import cache
 from common.log import Logger, log_params, log
 
@@ -28,6 +28,7 @@ logger.info('Initializing...')
 
 INDEX_BUCKET: str = solution.getenv('EMBEDDINGS_BUCKET_NAME')
 INDEX_DIR: str = 'tmp/embeddings'
+LAST_LOCAL_INDEX_UPDATE: datetime | None = None
 
 app = api_tools.ServiceAPI(title='Resume Chatbot API (experimental)',
                            description='Request / response API for the Resume Chatbot that uses LLM for queries.')
@@ -52,9 +53,10 @@ class AskInput(BaseModel):
     question: str
 
 
-@app.post('/ask')
+@app.post('/ask_gpt')
 @log_params
-def ask(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+def ask_gpt(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the GPT-3 model and return the answer."""
     question = data.question
 
     # TODO: investigate if this may be cached or shared across requests
@@ -91,6 +93,15 @@ def ask(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, H
     return {'answer': str(answer)}
 
 
+@app.post('/ask_goog')
+@log_params
+def ask_goog(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the Google model and return the answer."""
+    question = data.question
+
+    return {'answer': 'Not implemented yet'}
+
+
 @app.get('/people')
 @log_params
 def list_people() -> list[str]:
@@ -106,11 +117,17 @@ def healthcheck() -> dict:
     """Verify that the process is up without testing backend connections."""
     return solution.health_status()
 
+
 @cache
 @log
 def refresh_index():
     """Refresh the index of resumes from the database."""
-    logger.info('Refreshing index of resumes...')
-    # TODO - move this to dynamically update
-    gcs_tools.download(bucket_name=INDEX_BUCKET, local_dir=INDEX_DIR)
+    global LAST_LOCAL_INDEX_UPDATE
+    last_resume_refresh = admin_dao.AdminDAO().get_resumes_timestamp()
+    if LAST_LOCAL_INDEX_UPDATE is None or LAST_LOCAL_INDEX_UPDATE < last_resume_refresh:
+        logger.info('Refreshing local index of resumes...')
+        gcs_tools.download(bucket_name=INDEX_BUCKET, local_dir=INDEX_DIR)
+        LAST_LOCAL_INDEX_UPDATE = last_resume_refresh
+        return
 
+    logger.info('Skipping refresh of resumes index because it was done less than 60 seconds ago.')

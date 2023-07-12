@@ -22,4 +22,4 @@ source "../../../setenv.sh"
 log "Ask a question about a person..."
 gcurl -i -X POST \
   -d "{\"question\":\"Where does Roman Kharkovski live?\"}" \
-  "${CHAT_SVC_DEV_URL}/ask"
+  "${CHAT_SVC_DEV_URL}/ask_gpt"

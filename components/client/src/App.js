@@ -58,6 +58,7 @@ const defaultBackendUrl = cloudRunBackend;
 
 let userName = null;
 const fakeIdToken = "fakeIdToken";
+const forceLogin = true;
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -243,9 +244,11 @@ function App() {
 
 function Chat({ messages, addMessage, backendUrl, idToken }) {
   const [question, setQuestion] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isGptLoading, setIsGptLoading] = useState(false);
+  const [isGoogLoading, setIsGoogLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const answerPrefix = "Answer";
+  const answerPrefixGpt = "ChatGPT";
+  const answerPrefixGoog = "Google";
 
   const handleChange = (event) => {
     setQuestion(event.target.value);
@@ -253,11 +256,11 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setIsLoading(true);
+    setIsGptLoading(true);
     addMessage({ sender: userName, text: question });
 
     try {
-      const response = await fetch(`${backendUrl}/ask`, {
+      const response = await fetch(`${backendUrl}/ask_gpt`, {
         method: "POST",
         credentials: idToken === fakeIdToken ? "omit" : "include",
         headers: {
@@ -276,7 +279,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         const answer = data.answer;
 
         // Add the server's response to the chat history
-        addMessage({ sender: answerPrefix, text: answer });
+        addMessage({ sender: answerPrefixGpt, text: answer });
       } else {
         console.error("Error occurred while fetching answer:", response.status);
         setErrorMessage(`Error occurred while fetching answer: ${response}`);
@@ -288,7 +291,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
 
     // Reset the question field to be empty - or comment this out to leave it with the previous question
     // setQuestion("");
-    setIsLoading(false);
+    setIsGptLoading(false);
   };
 
   return (
@@ -310,7 +313,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         {messages.map((message, index) => (
           <Typography key={index} variant="body1" gutterBottom>
             <b>{message.sender}:</b> {message.text}
-            {message.sender === answerPrefix && <Typography height={20}></Typography>}
+            {message.sender === answerPrefixGpt && <Typography height={20}></Typography>}
           </Typography>
         ))}
       </Box>
@@ -329,7 +332,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
           Send
         </Button>
       </form>
-      {isLoading && (
+      {isGptLoading && (
         <Box
           sx={{
             display: "flex",
@@ -338,7 +341,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
             height: "50px",
           }}
         >
-          <Typography variant="body1">LLM processing in progress...</Typography>
+          <Typography variant="body1">Processing request for ChatGPT...</Typography>
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}

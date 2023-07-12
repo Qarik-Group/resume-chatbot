@@ -19,9 +19,8 @@ log "Running local 'setenv_dev.sh'"
 COMPONENT_NAME="query_engine"
 # shellcheck disable=SC2034
 COMPONENT_DIR="${PROJECT_HOME}/components/${COMPONENT_NAME}"
-LOG_LEVEL=DEBUG
-IMAGE_NAME=${CHAT_SVC_NAME}-img
-CACHE_TIMEOUT=60
-PORT=8080
+LOG_LEVEL="DEBUG"
+IMAGE_NAME="${CHAT_SVC_NAME}-img"
+PORT="8080"
 RESUME_MGR_DEV_URL="http://127.0.0.1:${CHAT_SVC_DEV_PORT}"
 # RESUME_MGR_DEV_URL=$(get_svc_url "${CHAT_SVC_NAME}")
