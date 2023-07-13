@@ -19,7 +19,7 @@ from fastapi import Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import chat_dao
-from common import api_tools, llm_tools, solution, gcs_tools, admin_dao
+from common import api_tools, chatgpt_tools, googleai_tools, solution, gcs_tools, admin_dao
 from common.cache import cache
 from common.log import Logger, log_params, log
 
@@ -62,7 +62,7 @@ def ask_gpt(data: AskInput, x_goog_authenticated_user_email: Annotated[str | Non
     # TODO: investigate if this may be cached or shared across requests
     refresh_index()
     logger.debug('Initializing query engine...')
-    query_engine = llm_tools.get_resume_query_engine(index_dir=INDEX_DIR)
+    query_engine = chatgpt_tools.get_resume_query_engine(index_dir=INDEX_DIR)
     if query_engine is None:
         raise SystemError('No resumes found in the database. Please upload resumes.')
 
@@ -98,8 +98,8 @@ def ask_gpt(data: AskInput, x_goog_authenticated_user_email: Annotated[str | Non
 def ask_google(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
     """Ask a question to the Google model and return the answer."""
     question = data.question
-
-    return {'answer': f'Not implemented. Original question: {question} from user: {x_goog_authenticated_user_email}'}
+    answer = googleai_tools.query(search_query=question)
+    return {'answer': answer}
 
 
 @app.get('/people')
@@ -107,7 +107,7 @@ def ask_google(data: AskInput, x_goog_authenticated_user_email: Annotated[str | 
 def list_people() -> list[str]:
     """List all people names found in the database of uploaded resumes."""
     refresh_index()
-    people = llm_tools.load_resumes(resume_dir='', index_dir=INDEX_DIR)
+    people = chatgpt_tools.load_resumes(resume_dir='', index_dir=INDEX_DIR)
     return [person for person in people.keys()]
 
 

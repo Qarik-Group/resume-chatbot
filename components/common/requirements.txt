@@ -1,4 +1,5 @@
 fastapi==0.100.0
+google-cloud-discoveryengine==0.9.1
 google-cloud-firestore==2.11.1
 llama-index==0.7.4
 nltk==3.8.1

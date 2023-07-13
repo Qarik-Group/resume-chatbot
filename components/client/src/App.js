@@ -279,22 +279,26 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         // Add the server's response to the chat history
         addMessage({ sender: answerPrefix, text: answer });
       } else {
-        const error = await response.json();
-        console.error(
-          `Error parsing response from: ${url}, status: ${response.status}, statusText: ${response.statusText}, response: ${error}`
-        );
-        errorHandler(`Error parsing response from ${url}: ${JSON.stringify(response)}`);
+        const contentType = response.headers.get("Content-Type");
+        let error;
+        if (contentType && contentType.includes("application/json")) {
+          error = JSON.stringify(await response.json());
+        } else {
+          error = await response.text();
+        }
+        console.error(`Error from: ${url}, status: ${response.status}, error: ${error}`);
+        errorHandler(`Error from: ${url}, status: ${response.status}, error: ${error}`);
       }
     } catch (error) {
-      console.error(`Error occurred while fetching answer from ${url}:`, error);
-      errorHandler(`Error occurred while fetching answer from ${url}: ${error}`);
+      console.error(`Error calling: ${url}, error: ${error}`);
+      errorHandler(`Error calling: ${url}, error: ${error}`);
     }
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     addMessage({ sender: userName, text: question });
-    callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
+    // callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
     callBackend(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
     // Reset the question field to be empty - or comment this out to leave it with the previous question
     // setQuestion("");

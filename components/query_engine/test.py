@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from common import llm_tools
+from common import chatgpt_tools
 from common.log import Logger, log
 
 logger = Logger(__name__).get_logger()
@@ -84,7 +84,7 @@ def main():
     print('********************** Testing Skills Query Bot *************************')
     print('*************************************************************************')
 
-    query_engine = llm_tools.get_resume_query_engine(index_dir='tmp/embeddings', resume_dir='dev/tmp/resumes')
+    query_engine = chatgpt_tools.get_resume_query_engine(index_dir='tmp/embeddings', resume_dir='dev/tmp/resumes')
 
     if query_engine is None:
         logger.error('No resumes found in the database. Please upload resumes or connect to the database.')
