@@ -79,3 +79,4 @@ deploy
 if [[ "${ENABLE_IAP}" == "true" ]]; then
   create_iap "${CHAT_SVC_NAME}"
 fi
+echo "${DEPLOYMENT_COMPLETE_MARKER}"

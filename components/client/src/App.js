@@ -49,8 +49,8 @@ const AppBarSpacer = styled("div")(({ theme }) => theme.mixins.toolbar);
 // eslint-disable-next-line no-unused-vars
 const localHostBackend = "http://127.0.0.1:5002";
 // eslint-disable-next-line no-unused-vars
-// const cloudRunBackend = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
-const cloudRunBackend = "https://skillsbot-backend-l5ej3633iq-uc.a.run.app";
+const cloudRunBackendProtectedIAP = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
+const cloudRunBackendDev = "https://skillsbot-backend-l5ej3633iq-uc.a.run.app";
 // eslint-disable-next-line no-unused-vars
 const iapBackend = "https://34.95.89.166.nip.io";
 // Which backend URL to use as the default value
@@ -201,10 +201,10 @@ function App() {
                 <Typography variant="h5">System information</Typography>
                 <Typography height={30}></Typography>
                 <Typography>
-                  <b>Version:</b> 0.1.10
+                  <b>Version:</b> 0.1.14
                 </Typography>
                 <Typography>
-                  <b>Software update:</b> June 6, 2023
+                  <b>Software update:</b> July 20, 2023
                 </Typography>
                 <Typography>
                   <b>Author:</b> Roman Kharkovski (kharkovski@gmail.com)
@@ -298,7 +298,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
     addMessage({ sender: userName, text: question });
-    // callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
+    callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
     callBackend(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
     // Reset the question field to be empty - or comment this out to leave it with the previous question
     // setQuestion("");

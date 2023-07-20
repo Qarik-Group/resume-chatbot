@@ -51,21 +51,19 @@ TIMEZONE: timezone = timezone.utc
 #########################################################
 # LLM specific settings
 #########################################################
-# MODEL_NAME = 'gpt-3.5-turbo'
-MODEL_NAME = 'gpt-4'
+# GPT_MODEL = 'text-davinci-003'
+# GPT_MODEL = 'gpt-3.5-turbo'
+GPT_MODEL = 'gpt-4'
 """LLM model name to be used."""
 
 MAX_KEYWORDS_PER_CHUNK = 100
 """Maximum number of keywords per chunk for Complex Query Graph."""
 
-CHUNK_SIZE_LIMIT = 1024
+CHUNK_SIZE = 1024
 """Maximum number of characters per chunk for Complex Query Graph."""
 
 TEMPERATURE = 0
 """Temperature for LLM model."""
-
-QUERY_SUFFIX = '\nIf you can not find the answer, answer the query with the best of your knowledge.'
-"""Suffix to be added to the query."""
 
 # Text QA templates
 # DEFAULT_TEXT_QA_PROMPT_TMPL = ('Context information is below. \n'

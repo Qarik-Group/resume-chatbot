@@ -10,9 +10,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. -->
 
-<!-- LLM part is based on: https://gpt-index.readthedocs.io/en/stable/guides/tutorials.html -->
-
 # Resume Chatbot
+
+This project demonstrates the use of the following LLMs for the purpose of Q&A over PDF files with resumes:
+
+- ChatGPT
+- Google PALM
+- Google Gen AI Enterprise Search
 
 This project allows users to interact with resumes stored in PDF files and ask questions about a single person or a
 group of people in plain English. Example questions:
@@ -228,3 +232,9 @@ This assumes that the initial setup was done using the `ENABLE_IAP=false` in the
   These changes may take from few minutes to hours to propagate, but the good news you only need to do it once.
 
 - Open the chatbot web page using url [https://<UI_IP_ADDRESS>.nip.io] and interact with the bot.
+
+# Credits
+
+Part of this project related to LlamaIndex was made possible and based on top of the wonderful work by LlamaIndex and
+its
+[tutorials](https://github.com/jerryjliu/llama_index/blob/main/docs/end_to_end_tutorials/question_and_answer/unified_query.md).

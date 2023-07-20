@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from unidecode import unidecode
 from google.cloud import discoveryengine
-from common import constants, solution
-from common.log import Logger, log, log_params
+from common import solution
+from common.log import Logger, log_params
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
@@ -26,15 +26,8 @@ SERVING_CONFIG_ID = 'default_config'
 
 
 @log_params
-def query(search_query: str) -> str:
-    """Query the Google Discovery Engine."""
-    response: str = str(search_sample(search_query=search_query))
-    return response
-
-
-def search_sample(
-    search_query: str,
-) -> List[discoveryengine.SearchResponse.SearchResult]:
+def query(search_query: str) -> str | None:
+    """Query the Google Discovery Engine with summarization enabled."""
     # Create a client
     client = discoveryengine.SearchServiceClient()
 
@@ -52,7 +45,11 @@ def search_sample(
         query=search_query,
     )
     response = client.search(request)
-    for result in response.results:
-        print(result)
+    # https://cloud.google.com/generative-ai-app-builder/docs/reference/rest/v1/SearchResponse
+    # print(response)
 
-    return response.results
+    for a in response.results[0].document.derived_struct_data['extractive_answers']:
+        for b in a.items():
+            return unidecode(str(b[1]))
+
+    return None

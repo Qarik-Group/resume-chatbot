@@ -86,3 +86,4 @@ build "${IMAGE_NAME}"
 popd || exit
 deploy
 create_gcs_trigger
+echo "${DEPLOYMENT_COMPLETE_MARKER}"

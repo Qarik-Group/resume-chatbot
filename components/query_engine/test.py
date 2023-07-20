@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from common import chatgpt_tools
+from common import chatgpt_tools, googleai_tools
 from common.log import Logger, log
 
 logger = Logger(__name__).get_logger()
@@ -24,16 +24,19 @@ def test_queries(query_engine) -> None:
     """Test sample queries."""
     queries = [
         'What are the main skills for Roman Kharkovski?',
+        # 'Did Steven Kim work for Google?',
         # 'Does Roman Kharkovski have Java skills?',
         # 'Compare and contrast the skills of Roman Kharkovski and Steven Kim.',
-        # 'List all people with Java skills. ',
+        # 'List all people with Java skills.',
         # 'Do any people have SAP or COBOL skills?',
+        # 'When did Roman Kharkovski start working for IBM?',
         # 'When did Roman Kharkovski start working for Google?',
         # 'What is the most common skill among all people?',
         # 'Tell me about Roman Kharkovski strengths and weaknesses?',
         # 'Among all people, who has the most experience with Java, Google Cloud, and Kubernetes?',
         # 'How many people have skills in Python and Machine Learning?',
-        # 'Where did Roman Kharkovski work the longest?'
+        # 'Where did Roman Kharkovski work the longest?',
+        # 'Give me a summary of skills of all people.',
     ]
 
     responses = []
@@ -84,13 +87,15 @@ def main():
     print('********************** Testing Skills Query Bot *************************')
     print('*************************************************************************')
 
-    query_engine = chatgpt_tools.get_resume_query_engine(index_dir='tmp/embeddings', resume_dir='dev/tmp/resumes')
+    gpt_query_engine = chatgpt_tools.get_resume_query_engine(index_dir='dev/tmp/embeddings', resume_dir='dev/tmp/resumes')
 
-    if query_engine is None:
+    if gpt_query_engine is None:
         logger.error('No resumes found in the database. Please upload resumes or connect to the database.')
         return
 
-    test_queries(query_engine)
+    test_queries(gpt_query_engine)
+    return
+    test_queries(googleai_tools)
 
     print('\n\nINTERACTIVE MODE:')
     while True:
@@ -101,10 +106,14 @@ def main():
         if query_text:
             print('Generating answer...')
             try:
-                response = query_engine.query(query_text)
+                # Test ChatGPT
+                gpt_response = gpt_query_engine.query(query_text)
                 # TODO - experiment with different prompt tunings
                 # response = query_engine.query(query_text + constants.QUERY_SUFFIX)
-                print(f'response: {response}')
+                print(f'GPT response: {gpt_response}')
+                # Test Google AI
+                goog_response = googleai_tools.query(query_text)
+                print(f'Google response: {goog_response}')
             except Exception as e:
                 logger.error('Error processing query: %s, error: %s', query_text, e)
                 print(f'ERROR: {e}')

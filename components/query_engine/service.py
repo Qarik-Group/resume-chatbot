@@ -130,4 +130,4 @@ def refresh_index():
         LAST_LOCAL_INDEX_UPDATE = last_resume_refresh
         return
 
-    logger.info('Skipping refresh of resumes index because it was done less than 60 seconds ago.')
+    logger.info('Skipping refresh of resumes index because no changes in source resume were detected.')

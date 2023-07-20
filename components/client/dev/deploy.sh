@@ -66,3 +66,4 @@ deploy
 if [[ "${ENABLE_IAP}" == "true" ]]; then
   create_iap "${UI_SVC_NAME}"
 fi
+echo "${DEPLOYMENT_COMPLETE_MARKER}"
