@@ -47,17 +47,18 @@ const Main = styled("main")(({ theme }) => ({
 const AppBarSpacer = styled("div")(({ theme }) => theme.mixins.toolbar);
 
 // eslint-disable-next-line no-unused-vars
-const localHostBackend = "http://127.0.0.1:8000";
+const localHostBackend = "http://127.0.0.1:5002";
 // eslint-disable-next-line no-unused-vars
-// const cloudRunBackend = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
-const cloudRunBackend = "https://skillsbot-backend-l5ej3633iq-uc.a.run.app";
+const cloudRunBackendProtectedIAP = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
+const cloudRunBackendDev = "https://skillsbot-backend-l5ej3633iq-uc.a.run.app";
 // eslint-disable-next-line no-unused-vars
 const iapBackend = "https://34.95.89.166.nip.io";
 // Which backend URL to use as the default value
-const defaultBackendUrl = cloudRunBackend;
+const defaultBackendUrl = localHostBackend;
 
 let userName = null;
 const fakeIdToken = "fakeIdToken";
+const forceLogin = true;
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -200,10 +201,10 @@ function App() {
                 <Typography variant="h5">System information</Typography>
                 <Typography height={30}></Typography>
                 <Typography>
-                  <b>Version:</b> 0.1.10
+                  <b>Version:</b> 0.1.14
                 </Typography>
                 <Typography>
-                  <b>Software update:</b> June 6, 2023
+                  <b>Software update:</b> July 20, 2023
                 </Typography>
                 <Typography>
                   <b>Author:</b> Roman Kharkovski (kharkovski@gmail.com)
@@ -243,27 +244,27 @@ function App() {
 
 function Chat({ messages, addMessage, backendUrl, idToken }) {
   const [question, setQuestion] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const answerPrefix = "Answer";
+  const [isGptLoading, setIsGptLoading] = useState(false);
+  const [isGoogLoading, setIsGoogLoading] = useState(false);
+  const [gptErrorMessage, setGptErrorMessage] = useState("");
+  const [googErrorMessage, setGoogErrorMessage] = useState("");
+  const answerPrefixGpt = "Open AI";
+  const answerPrefixGoog = "Google AI";
 
   const handleChange = (event) => {
     setQuestion(event.target.value);
   };
 
-  const handleSubmit = async (event) => {
+  const callBackend = async (event, url, errorHandler, answerPrefix, isLoading) => {
     event.preventDefault();
-    setIsLoading(true);
-    addMessage({ sender: userName, text: question });
-
     try {
-      const response = await fetch(`${backendUrl}/ask`, {
+      isLoading(true);
+      const response = await fetch(url, {
         method: "POST",
         credentials: idToken === fakeIdToken ? "omit" : "include",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
-          // Accept: "application/json",
           Accept: "application/json, text/plain, */*",
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Credentials": true,
@@ -271,24 +272,36 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         body: JSON.stringify({ question: question }),
       });
 
+      isLoading(false);
       if (response.ok) {
         const data = await response.json();
         const answer = data.answer;
-
         // Add the server's response to the chat history
         addMessage({ sender: answerPrefix, text: answer });
       } else {
-        console.error("Error occurred while fetching answer:", response.status);
-        setErrorMessage(`Error occurred while fetching answer: ${response}`);
+        const contentType = response.headers.get("Content-Type");
+        let error;
+        if (contentType && contentType.includes("application/json")) {
+          error = JSON.stringify(await response.json());
+        } else {
+          error = await response.text();
+        }
+        console.error(`Error from: ${url}, status: ${response.status}, error: ${error}`);
+        errorHandler(`Error from: ${url}, status: ${response.status}, error: ${error}`);
       }
     } catch (error) {
-      console.error("Error occurred while fetching answer:", error);
-      setErrorMessage(`Error occurred while fetching answer: ${error}`);
+      console.error(`Error calling: ${url}, error: ${error}`);
+      errorHandler(`Error calling: ${url}, error: ${error}`);
     }
+  };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    addMessage({ sender: userName, text: question });
+    callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
+    callBackend(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
     // Reset the question field to be empty - or comment this out to leave it with the previous question
     // setQuestion("");
-    setIsLoading(false);
   };
 
   return (
@@ -310,7 +323,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         {messages.map((message, index) => (
           <Typography key={index} variant="body1" gutterBottom>
             <b>{message.sender}:</b> {message.text}
-            {message.sender === answerPrefix && <Typography height={20}></Typography>}
+            {message.sender === answerPrefixGpt && <Typography height={20}></Typography>}
           </Typography>
         ))}
       </Box>
@@ -329,7 +342,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
           Send
         </Button>
       </form>
-      {isLoading && (
+      {isGptLoading && (
         <Box
           sx={{
             display: "flex",
@@ -338,13 +351,31 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
             height: "50px",
           }}
         >
-          <Typography variant="body1">LLM processing in progress...</Typography>
+          <Typography variant="body1">Processing request for ChatGPT...</Typography>
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
-      {errorMessage && (
+      {isGoogLoading && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "50px",
+          }}
+        >
+          <Typography variant="body1">Processing request for Google...</Typography>
+          <CircularProgress sx={{ marginRight: "8px" }} />
+        </Box>
+      )}
+      {gptErrorMessage && (
         <Alert severity="error" sx={{ marginTop: 2 }}>
-          {errorMessage}
+          {gptErrorMessage}
+        </Alert>
+      )}
+      {googErrorMessage && (
+        <Alert severity="error" sx={{ marginTop: 2 }}>
+          {googErrorMessage}
         </Alert>
       )}
       <Typography height={15}></Typography>
@@ -418,7 +449,7 @@ function Help() {
         <Typography variant="h5">How do I submit feature requests and file bugs?</Typography>
         <Typography height={15}></Typography>
         <Typography>
-          If you found a bug, or have any ideas on how to improve this tool, please open an issue using project's
+          If you found a bug, or have any ideas on how to improve this tool, please open an issue using project's{" "}
           <a href="https://github.com/Qarik-Group/resume-chatbot/issues">GitHub Issues</a> page.
         </Typography>
       </Box>

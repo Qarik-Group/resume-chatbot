@@ -13,20 +13,19 @@
 # limitations under the License.
 """Set of utility functions to work with Firestore."""
 
-import os
-
-from google.cloud import firestore  # type: ignore
-from common import solution
-from common.log import Logger, log
-
-logger = Logger(__name__).get_logger()
+from pydantic import BaseModel
+from humps import camelize    # type:ignore
 
 
-@log
-def create_firestore_client():
-    """Set up Firestore client."""
-    if os.environ.get('FIRESTORE_EMULATOR_HOST'):
-        from google.auth.credentials import AnonymousCredentials
-        return firestore.Client(project=solution.PROJECT_ID, credentials=AnonymousCredentials())
-    else:
-        return firestore.Client()
+def to_camel(string):
+    """Convert string to camel case."""
+    return camelize(string)
+
+
+class CamelModel(BaseModel):
+    """Used to automatically generate camel case output used for REST APIs from Pythonic snake case."""
+
+    class Config:
+        """Utility class used for automatic snake to camel case conversion."""
+        alias_generator = to_camel
+        allow_population_by_field_name = True

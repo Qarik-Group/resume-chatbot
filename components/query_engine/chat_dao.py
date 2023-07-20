@@ -41,7 +41,7 @@ class ChatDao:
     def create(self, user_id: str) -> Any:
         """Create new user document and return DocRef."""
         doc_ref = self._collection.document(user_id)
-        doc_ref.set({'user_id': user_id, 'first_login': datetime.now(tz=constants.TIMEZONE)})
+        doc_ref.set({'user_id': user_id, 'first_login': solution.now()})
         return doc_ref
 
     @log
@@ -65,7 +65,7 @@ class ChatDao:
         interaction: dict[str, Any] = {
             'question': question,
             'answer': answer,
-            'timestamp': datetime.now(tz=constants.TIMEZONE)
+            'timestamp': solution.now()
         }
         # Append new interaction to the list of existing interactions in the user document
         data = {'interactions': firestore.ArrayUnion([interaction])}

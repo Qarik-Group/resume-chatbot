@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Copyright 2023 Qarik Group, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,22 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Set of utility functions to work with Firestore."""
 
-import os
+# shellcheck source=/dev/null
+source "../../../setenv.sh"
 
-from google.cloud import firestore  # type: ignore
-from common import solution
-from common.log import Logger, log
-
-logger = Logger(__name__).get_logger()
-
-
-@log
-def create_firestore_client():
-    """Set up Firestore client."""
-    if os.environ.get('FIRESTORE_EMULATOR_HOST'):
-        from google.auth.credentials import AnonymousCredentials
-        return firestore.Client(project=solution.PROJECT_ID, credentials=AnonymousCredentials())
-    else:
-        return firestore.Client()
+cd ..
+python3 test.py
