@@ -31,7 +31,6 @@ log "Running top level 'setenv.sh'"
 
 export PYTHONPATH="${PROJECT_HOME}/components"
 export LOG_LEVEL="DEBUG"
-export DEPLOYMENT_COMPLETE_MARKER="deployment.complete.marker"
 
 # ------------------------- Check for the global settings
 if [ ! -f "${PROJECT_HOME}/.env" ]; then

@@ -23,7 +23,9 @@ logger.info('Initializing...')
 def test_queries(query_engine) -> None:
     """Test sample queries."""
     queries = [
-        'What are the main skills for Roman Kharkovski?',
+        # 'What is Roman Kharkovski's current job?',
+        # 'What are the main skills for Roman Kharkovski?',
+        'How many total years of experience does Roman Kharkovski have?',
         # 'Did Steven Kim work for Google?',
         # 'Does Roman Kharkovski have Java skills?',
         # 'Compare and contrast the skills of Roman Kharkovski and Steven Kim.',

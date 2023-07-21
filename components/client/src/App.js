@@ -58,7 +58,6 @@ const defaultBackendUrl = localHostBackend;
 
 let userName = null;
 const fakeIdToken = "fakeIdToken";
-const forceLogin = true;
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -258,6 +257,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
   const callBackend = async (event, url, errorHandler, answerPrefix, isLoading) => {
     event.preventDefault();
     try {
+      errorHandler("");
       isLoading(true);
       const response = await fetch(url, {
         method: "POST",

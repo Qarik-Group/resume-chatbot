@@ -57,14 +57,15 @@ class ChatDao:
         return bool(doc_ref)
 
     @log
-    def save_question_answer(self, user_id: str, question: Any, answer: Any) -> Any:
+    def save_question_answer(self, user_id: str, question: Any, answer: Any, llm_backend: str) -> Any:
         """Update user document."""
         doc_ref = self._get_doc_ref_by_id(user_id)
         if doc_ref is None:
             doc_ref = self.create(user_id)
         interaction: dict[str, Any] = {
-            'question': question,
             'answer': answer,
+            'llm': llm_backend,
+            'question': question,
             'timestamp': solution.now()
         }
         # Append new interaction to the list of existing interactions in the user document

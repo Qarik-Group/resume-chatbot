@@ -18,11 +18,10 @@ import threading
 from pathlib import Path
 from typing import Any, List
 
-import llama_index
 from common import constants
 from common.log import Logger, log, log_params
-from llama_index.llms import OpenAI
 from langchain.llms.openai import OpenAIChat
+from llama_index.llms import PaLM
 from llama_index import (Document, GPTSimpleKeywordTableIndex, GPTVectorStoreIndex, ServiceContext,
                          SimpleDirectoryReader, StorageContext, load_index_from_storage, LLMPredictor)
 from llama_index.indices.composability import ComposableGraph
@@ -135,7 +134,7 @@ def _load_resume_index_summary(resumes: dict[str, Any]) -> dict[str, str]:
 @log_params
 def generate_embeddings(resume_dir: str, index_dir: str) -> None:
     """Generate embeddings from PDF resumes."""
-    load_resumes(source_data_dir=resume_dir, index_dir=index_dir)
+    load_resumes(resume_dir=resume_dir, index_dir=index_dir)
     # resumes = load_resumes(source_data_dir=resume_dir, index_dir=index_dir)
     # if not resumes:
     #     return None
@@ -148,6 +147,8 @@ def generate_embeddings(resume_dir: str, index_dir: str) -> None:
 def get_resume_query_engine(index_dir: str, resume_dir: str | None = None) -> BaseQueryEngine | None:
     """Load the index from disk, or build it if it doesn't exist."""
     llm = LLMPredictor(llm=OpenAIChat(temperature=constants.TEMPERATURE, model_name=constants.GPT_MODEL))
+    # TODO: use PaLM instead of OpenAIChat: https://github.com/google/generative-ai-docs/blob/main/demos/palm/web/list-it/README.md
+    # llm = LLMPredictor(llm=PaLM())
 
     service_context = ServiceContext.from_defaults(llm_predictor=llm, chunk_size_limit=constants.CHUNK_SIZE)
 
@@ -176,7 +177,7 @@ def get_resume_query_engine(index_dir: str, resume_dir: str | None = None) -> Ba
 
     custom_query_engines = {}
     for index in vector_indices.values():
-        query_engine = index.as_query_engine(service_context=service_context)
+        query_engine = index.as_query_engine(service_context=service_context, similarity_top_k=10)
         query_engine = TransformQueryEngine(query_engine=query_engine,
                                             query_transform=decompose_transform,
                                             transform_metadata={'index_summary': index.index_struct.summary},
