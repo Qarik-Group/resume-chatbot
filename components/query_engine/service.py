@@ -20,7 +20,7 @@ from fastapi import Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import chat_dao
-from common import api_tools, chatgpt_tools, constants, googleai_tools, solution, gcs_tools, admin_dao
+from common import api_tools, constants, googleai_tools, llm_tools, solution, gcs_tools, admin_dao
 from common.cache import cache
 from common.log import Logger, log_params, log
 
@@ -102,7 +102,7 @@ def ask_gpt(data: AskInput, x_goog_authenticated_user_email: Annotated[str | Non
     """Ask a question to the GPT-3 model and return the answer."""
     question = data.question
     refresh_index()
-    query_engine = chatgpt_tools.get_resume_query_engine(index_dir=INDEX_DIR)
+    query_engine = llm_tools.get_resume_query_engine(index_dir=INDEX_DIR)
     if query_engine is None:
         raise SystemError('No resumes found in the database. Please upload resumes.')
 
@@ -132,7 +132,7 @@ def ask_google(data: AskInput, x_goog_authenticated_user_email: Annotated[str | 
 def list_people() -> list[str]:
     """List all people names found in the database of uploaded resumes."""
     refresh_index()
-    people = chatgpt_tools.load_resumes(resume_dir='', index_dir=INDEX_DIR)
+    people = llm_tools.load_resumes(resume_dir='', index_dir=INDEX_DIR)
     return [person for person in people.keys()]
 
 
@@ -151,7 +151,7 @@ def refresh_index():
         index_path = Path(INDEX_DIR)
         if not index_path.exists():
             # Only generate embeddings if they do not exist
-            chatgpt_tools.generate_embeddings(resume_dir='dev/tmp', index_dir=INDEX_DIR)
+            llm_tools.generate_embeddings(resume_dir='dev/tmp', index_dir=INDEX_DIR)
         return
 
     global LAST_LOCAL_INDEX_UPDATE

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from common import chatgpt_tools, googleai_tools
+from common import googleai_tools, llm_tools
 from common.log import Logger, log
 
 logger = Logger(__name__).get_logger()
@@ -23,10 +23,13 @@ logger.info('Initializing...')
 def test_queries(query_engine) -> None:
     """Test sample queries."""
     queries = [
-        # 'What is Roman Kharkovski's current job?',
+        'What is current job of Roman Kharkovski?',
+        # 'Give me a list of all people who have provided their resumes.',
+        # 'What is Roman Kharkovski\'s email?',
         # 'What are the main skills for Roman Kharkovski?',
-        'How many total years of experience does Roman Kharkovski have?',
+        # 'How many total years of experience does Roman Kharkovski have?',
         # 'Did Steven Kim work for Google?',
+        # 'What companies Roman Kharkovski worked for?',
         # 'Does Roman Kharkovski have Java skills?',
         # 'Compare and contrast the skills of Roman Kharkovski and Steven Kim.',
         # 'List all people with Java skills.',
@@ -89,7 +92,7 @@ def main():
     print('********************** Testing Skills Query Bot *************************')
     print('*************************************************************************')
 
-    gpt_query_engine = chatgpt_tools.get_resume_query_engine(index_dir='dev/tmp/embeddings', resume_dir='dev/tmp/resumes')
+    gpt_query_engine = llm_tools.get_resume_query_engine(index_dir='dev/tmp/embeddings', resume_dir='dev/tmp/resumes')
 
     if gpt_query_engine is None:
         logger.error('No resumes found in the database. Please upload resumes or connect to the database.')

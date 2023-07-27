@@ -65,6 +65,9 @@ CHUNK_SIZE = 1024
 TEMPERATURE = 0
 """Temperature for LLM model."""
 
+SIMILARITY_TOP_K = 50
+"""Number of top similar documents to retrieve."""
+
 # Text QA templates
 # DEFAULT_TEXT_QA_PROMPT_TMPL = ('Context information is below. \n'
 #                                '---------------------\n'

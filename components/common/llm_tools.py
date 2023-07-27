@@ -18,9 +18,10 @@ import threading
 from pathlib import Path
 from typing import Any, List
 
-from common import constants
+from common import constants, solution
 from common.log import Logger, log, log_params
 from langchain.llms.openai import OpenAIChat
+import google.generativeai as palm
 from llama_index.llms import PaLM
 from llama_index import (Document, GPTSimpleKeywordTableIndex, GPTVectorStoreIndex, ServiceContext,
                          SimpleDirectoryReader, StorageContext, load_index_from_storage, LLMPredictor)
@@ -37,6 +38,26 @@ logger.info('Initializing...')
 
 DATA_LOAD_LOCK = threading.Lock()
 """Block many concurrent data loads at once."""
+
+
+@log
+def get_llm() -> LLMPredictor:
+    """Return LLM predictor."""
+    use_google_palm = False
+    if use_google_palm:
+        # TODO: use PaLM instead of OpenAIChat: https://github.com/google/generative-ai-docs/blob/main/demos/palm/web/list-it/README.md
+        # palm.configure(api_key=solution.getenv('GOOGLE_PALM_API_KEY'))
+        llm = LLMPredictor(llm=PaLM(api_key=solution.getenv('GOOGLE_PALM_API_KEY')))
+        # -------------------- DEBUG START
+        # from llama_index.llms.palm import PaLM
+        # model = PaLM(api_key=solution.getenv('GOOGLE_PALM_API_KEY'))
+        # result = model.complete('Who is George Washington?')
+        # print(result)
+        # exit(0)
+        # -------------------- DEBUG END
+    else:
+        llm = LLMPredictor(llm=OpenAIChat(temperature=constants.TEMPERATURE, model_name=constants.GPT_MODEL))
+    return llm
 
 
 @log_params
@@ -109,11 +130,14 @@ def load_resume_indices(resumes: dict[str, List[Document]],
             logger.debug('Saving index to storage file: %s', cache_file_path)
             storage_context.persist(persist_dir=str(cache_file_path))
 
-    # Test
+    # ------------------- Test
     # name = 'Roman Kharkovski'
-    # response = vector_indices[f'{name}'].as_query_engine().query(f'What are the main skills for {name}?')
+    # test_query = f'What are the main skills for {name}?'
+    # logger.debug('Test query: %s', test_query)
+    # response = vector_indices[f'{name}'].as_query_engine().query(test_query)
     # logger.debug('Response: %s', str(response))
-    # end of test
+    # exit(0)
+    # ------------------- end of test
 
     return vector_indices    # type: ignore
 
@@ -146,10 +170,7 @@ def generate_embeddings(resume_dir: str, index_dir: str) -> None:
 @log_params
 def get_resume_query_engine(index_dir: str, resume_dir: str | None = None) -> BaseQueryEngine | None:
     """Load the index from disk, or build it if it doesn't exist."""
-    llm = LLMPredictor(llm=OpenAIChat(temperature=constants.TEMPERATURE, model_name=constants.GPT_MODEL))
-    # TODO: use PaLM instead of OpenAIChat: https://github.com/google/generative-ai-docs/blob/main/demos/palm/web/list-it/README.md
-    # llm = LLMPredictor(llm=PaLM())
-
+    llm = get_llm()
     service_context = ServiceContext.from_defaults(llm_predictor=llm, chunk_size_limit=constants.CHUNK_SIZE)
 
     resumes: dict[str, List[Document]] = load_resumes(resume_dir=resume_dir, index_dir=index_dir)
@@ -164,10 +185,8 @@ def get_resume_query_engine(index_dir: str, resume_dir: str | None = None) -> Ba
                                          index_summaries=[summary for _, summary in index_summaries.items()],
                                          max_keywords_per_chunk=constants.MAX_KEYWORDS_PER_CHUNK)
 
-    # get root index
     # root_index = graph.get_index(graph.root_id)
     root_index = graph.get_index(index_struct_id=graph.root_id)
-    # set id of root index
     root_index.set_index_id('compare_contrast')
     graph.index_struct.summary = ('This index contains resumes of multiple people. '
                                   'Do not confuse people with the same lastname, but different first names.'
@@ -177,7 +196,8 @@ def get_resume_query_engine(index_dir: str, resume_dir: str | None = None) -> Ba
 
     custom_query_engines = {}
     for index in vector_indices.values():
-        query_engine = index.as_query_engine(service_context=service_context, similarity_top_k=10)
+        query_engine = index.as_query_engine(service_context=service_context,
+                                             similarity_top_k=constants.SIMILARITY_TOP_K)
         query_engine = TransformQueryEngine(query_engine=query_engine,
                                             query_transform=decompose_transform,
                                             transform_metadata={'index_summary': index.index_struct.summary},
@@ -194,12 +214,12 @@ def get_resume_query_engine(index_dir: str, resume_dir: str | None = None) -> Ba
 
     graph_query_engine = graph.as_query_engine(custom_query_engines=custom_query_engines)
 
-    # Test
+    # ------------------- Test
     # name1 = 'Roman Kharkovski'
     # name2 = 'Steven Kim'
     # response = graph_query_engine.query(f'Compare and contrast the skills of {name1} and {name2}.')
     # logger.debug('Response: %s', str(response))
-    # end of test
+    # ------------------- end of test
 
     return graph_query_engine
 
