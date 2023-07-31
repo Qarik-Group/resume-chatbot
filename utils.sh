@@ -28,6 +28,12 @@ ONE_DAY=$((ONE_HOUR * 24))
 ONE_MONTH=$((ONE_DAY * 31))
 # shellcheck disable=SC2034
 
+# Used to mark end of log files for async checks
+DEPLOYMENT_COMPLETE_MARKER="deployment.complete.marker"
+
+# Marker of the environment to signalize to the process it is running on a local Dev machine
+export LOCAL_DEVELOPMENT_MODE="true"
+
 ###############################################
 # Starts measurements of time
 ###############################################

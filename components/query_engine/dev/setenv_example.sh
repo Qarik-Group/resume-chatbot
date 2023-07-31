@@ -24,3 +24,4 @@ IMAGE_NAME="${CHAT_SVC_NAME}-img"
 PORT="8080"
 RESUME_MGR_DEV_URL="http://127.0.0.1:${CHAT_SVC_DEV_PORT}"
 # RESUME_MGR_DEV_URL=$(get_svc_url "${CHAT_SVC_NAME}")
+GOOGLE_PALM_API_KEY="....put your key here...."

@@ -13,22 +13,28 @@
 # limitations under the License.
 """Main API service that handles REST API calls to LLM and is run on server."""
 
-from typing import Annotated
+from pathlib import Path
+from typing import Annotated, Any
 from datetime import datetime
 from fastapi import Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import chat_dao
-from common import api_tools, chatgpt_tools, googleai_tools, solution, gcs_tools, admin_dao
+from common import api_tools, constants, googleai_tools, llm_tools, solution, gcs_tools, admin_dao
 from common.cache import cache
 from common.log import Logger, log_params, log
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
 
-INDEX_BUCKET: str = solution.getenv('EMBEDDINGS_BUCKET_NAME')
-INDEX_DIR: str = 'tmp/embeddings'
 LAST_LOCAL_INDEX_UPDATE: datetime | None = None
+LOCAL_DEVELOPMENT_MODE: bool = bool(solution.getenv('LOCAL_DEVELOPMENT_MODE', default=False))
+INDEX_BUCKET: str = solution.getenv('EMBEDDINGS_BUCKET_NAME')
+if LOCAL_DEVELOPMENT_MODE:
+    INDEX_DIR: str = 'dev/tmp/embeddings'
+else:
+    INDEX_DIR: str = 'tmp/embeddings'
+
 
 app = api_tools.ServiceAPI(title='Resume Chatbot API (experimental)',
                            description='Request / response API for the Resume Chatbot that uses LLM for queries.')
@@ -49,56 +55,97 @@ _db = chat_dao.ChatDao()
 """Data Access Object to abstract access to the database from the rest of the app."""
 
 
+def get_user_id(user_email: str | None) -> str:
+    """Extract user ID from the request headers.˝"""
+    user_id: str = 'anonymous'
+    if user_email is None:
+        logger.warning('No authenticated user email found in the request headers.')
+    else:
+        # Header passed from IAP
+        # Extract part of the x_goog_authenticated_user_email string after the ':'
+        # Example: accounts.google.com:rkharkovski@qarik.com -> rkharkovski@qarik.com
+        user_id = user_email.split(':')[-1]
+    logger.debug('Received question from user: %s', user_id)
+    return user_id
+
+
+def run_query(question: str, user_id: str, query_engine: Any, llm_backend: str) -> str:
+    """Run a query against the LLM model."""
+    try:
+        logger.debug('Querying LLM...')
+        answer = str(query_engine.query(question))
+    except Exception as e:
+        logger.error('Error querying LLM: %s', e)
+        try:
+            _db.save_question_answer(user_id=user_id,
+                                     question=question,
+                                     answer=f'Error querying LLM: {e}',
+                                     llm_backend=llm_backend)
+        except Exception:
+            pass
+        raise SystemError('Error querying LLM: %s' % e)
+
+    _db.save_question_answer(user_id=user_id,
+                             question=question,
+                             answer=answer,
+                             llm_backend=llm_backend)
+    return answer
+
+
 class AskInput(BaseModel):
     question: str
+
+
+@log_params
+def ask_llm(data: AskInput,
+            provider: constants.LlmProvider,
+            x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the given LLM model."""
+    question = data.question
+    refresh_index()
+    query_engine = llm_tools.get_resume_query_engine(index_dir=INDEX_DIR, provider=provider)
+    if query_engine is None:
+        raise SystemError('No resumes found in the database. Please upload resumes.')
+
+    user_id: str = get_user_id(x_goog_authenticated_user_email)
+    answer: str = run_query(question=question,
+                            user_id=user_id,
+                            query_engine=query_engine,
+                            llm_backend=constants.GPT_MODEL)
+    return {'answer': answer}
 
 
 @app.post('/ask_gpt')
 @log_params
 def ask_gpt(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
     """Ask a question to the GPT-3 model and return the answer."""
-    question = data.question
+    return ask_llm(data=data, provider=constants.LlmProvider.OPEN_AI, x_goog_authenticated_user_email=x_goog_authenticated_user_email)
 
-    # TODO: investigate if this may be cached or shared across requests
-    refresh_index()
-    logger.debug('Initializing query engine...')
-    query_engine = chatgpt_tools.get_resume_query_engine(index_dir=INDEX_DIR)
-    if query_engine is None:
-        raise SystemError('No resumes found in the database. Please upload resumes.')
 
-    user_id: str = 'anonymous'
-    if x_goog_authenticated_user_email is None:
-        logger.warning('No authenticated user email found in the request headers.')
-    else:
-        # Header passed from IAP
-        # Extract part of the x_goog_authenticated_user_email string after the ':'
-        # Example: accounts.google.com:rkharkovski@qarik.com -> rkharkovski@qarik.com
-        user_id = x_goog_authenticated_user_email.split(':')[-1]
-    logger.debug('Received question from user: %s', user_id)
+@app.post('/ask_palm')
+@log_params
+def ask_palm(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the Google PaLM model."""
+    return ask_llm(data=data, provider=constants.LlmProvider.GOOGLE_PALM, x_goog_authenticated_user_email=x_goog_authenticated_user_email)
 
-    try:
-        logger.debug('Querying LLM...')
-        answer = query_engine.query(question)
-        # TODO - experiment with different prompt tunings
-        # response = query_engine.query(query_text + constants.QUERY_SUFFIX)
-    except Exception as e:
-        logger.error('Error querying LLM: %s', e)
-        try:
-            _db.save_question_answer(user_id=user_id, question=question, answer=f'Error querying LLM: {e}')
-        except Exception:
-            pass
-        raise SystemError('Error querying LLM: %s' % e)
 
-    _db.save_question_answer(user_id=user_id, question=question, answer=str(answer))
-    return {'answer': str(answer)}
+@app.post('/ask_llama')
+@log_params
+def ask_llama(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the local Llama 2 model."""
+    return {'answer': 'Local Llama 2 is not implemented yet.'}
 
 
 @app.post('/ask_google')
 @log_params
 def ask_google(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
-    """Ask a question to the Google model and return the answer."""
+    """Ask a question to the Google Enterprise Search (Gen AI) model."""
     question = data.question
-    answer = googleai_tools.query(search_query=question)
+    user_id: str = get_user_id(x_goog_authenticated_user_email)
+    answer: str = run_query(question=question,
+                            user_id=user_id,
+                            query_engine=googleai_tools,
+                            llm_backend='Google Enterprise Search')
     return {'answer': answer}
 
 
@@ -107,7 +154,7 @@ def ask_google(data: AskInput, x_goog_authenticated_user_email: Annotated[str | 
 def list_people() -> list[str]:
     """List all people names found in the database of uploaded resumes."""
     refresh_index()
-    people = chatgpt_tools.load_resumes(resume_dir='', index_dir=INDEX_DIR)
+    people = llm_tools.load_resumes(resume_dir='', index_dir=INDEX_DIR)
     return [person for person in people.keys()]
 
 
@@ -122,6 +169,13 @@ def healthcheck() -> dict:
 @log
 def refresh_index():
     """Refresh the index of resumes from the database."""
+    if LOCAL_DEVELOPMENT_MODE:
+        index_path = Path(INDEX_DIR)
+        if not index_path.exists():
+            # Only generate embeddings if they do not exist
+            llm_tools.generate_embeddings(resume_dir='dev/tmp', index_dir=INDEX_DIR)
+        return
+
     global LAST_LOCAL_INDEX_UPDATE
     last_resume_refresh = admin_dao.AdminDAO().get_resumes_timestamp()
     if LAST_LOCAL_INDEX_UPDATE is None or LAST_LOCAL_INDEX_UPDATE < last_resume_refresh:

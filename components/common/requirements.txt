@@ -1,6 +1,7 @@
 fastapi==0.100.0
 google-cloud-discoveryengine==0.9.1
 google-cloud-firestore==2.11.1
+google-generativeai==0.1.0
 llama-index==0.7.10.post1
 nltk==3.8.1
 Pillow==10.0.0

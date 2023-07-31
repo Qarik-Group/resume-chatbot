@@ -32,10 +32,10 @@ log "Waiting for all deployments to finish."
 # Loop until all log files in COMPONENT_LIST have marker DEPLOYMENT_COMPLETE_MARKER
 while [ ${#COMPONENT_LIST[@]} -gt 0 ]; do
   sleep 3
-  # echo "COMPONENT_LIST=${COMPONENT_LIST[*]}"
+  # log "COMPONENT_LIST=${COMPONENT_LIST[*]}"
   for i in "${!COMPONENT_LIST[@]}"; do
     dir="${COMPONENT_LIST[${i}]}"
-    echo "Waiting for deployment in [${dir}]..."
+    log "Waiting for deployment in [${dir}]..."
     if grep "${DEPLOYMENT_COMPLETE_MARKER}" "${dir}/dev/deploy.log"; then
       unset 'COMPONENT_LIST[i]'
       continue
