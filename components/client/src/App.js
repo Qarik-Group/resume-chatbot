@@ -243,12 +243,21 @@ function App() {
 
 function Chat({ messages, addMessage, backendUrl, idToken }) {
   const [question, setQuestion] = useState("");
+
   const [isGptLoading, setIsGptLoading] = useState(false);
+  const [isPalmLoading, setIsPalmLoading] = useState(false);
   const [isGoogLoading, setIsGoogLoading] = useState(false);
+  const [isLlamaLoading, setIsLlamaLoading] = useState(false);
+
   const [gptErrorMessage, setGptErrorMessage] = useState("");
+  const [palmErrorMessage, setPalmErrorMessage] = useState("");
   const [googErrorMessage, setGoogErrorMessage] = useState("");
-  const answerPrefixGpt = "Open AI";
-  const answerPrefixGoog = "Google AI";
+  const [llamaErrorMessage, setLlamaErrorMessage] = useState("");
+
+  const answerPrefixGpt = "OpenAI (Chat GPT 4)";
+  const answerPrefixPalm = "Google PaLM";
+  const answerPrefixGoog = "Google GenAI (Enterprise Search)";
+  const answerPrefixLlama = "Llama 2 (local)";
 
   const handleChange = (event) => {
     setQuestion(event.target.value);
@@ -297,9 +306,13 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    addMessage({ sender: "----------- QUESTION", text: "" });
     addMessage({ sender: userName, text: question });
+    addMessage({ sender: "----------- ANSWERS", text: "" });
     callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
+    callBackend(event, `${backendUrl}/ask_palm`, setPalmErrorMessage, answerPrefixPalm, setIsPalmLoading);
     callBackend(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
+    callBackend(event, `${backendUrl}/ask_llama`, setLlamaErrorMessage, answerPrefixLlama, setIsLlamaLoading);
     // Reset the question field to be empty - or comment this out to leave it with the previous question
     // setQuestion("");
   };
@@ -355,6 +368,19 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
+      {isPalmLoading && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "50px",
+          }}
+        >
+          <Typography variant="body1">Processing request for Google PaLM...</Typography>
+          <CircularProgress sx={{ marginRight: "8px" }} />
+        </Box>
+      )}
       {isGoogLoading && (
         <Box
           sx={{
@@ -368,14 +394,37 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
+      {isLlamaLoading && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "50px",
+          }}
+        >
+          <Typography variant="body1">Processing request for Llama 2 (local)...</Typography>
+          <CircularProgress sx={{ marginRight: "8px" }} />
+        </Box>
+      )}
       {gptErrorMessage && (
         <Alert severity="error" sx={{ marginTop: 2 }}>
           {gptErrorMessage}
         </Alert>
       )}
+      {palmErrorMessage && (
+        <Alert severity="error" sx={{ marginTop: 2 }}>
+          {palmErrorMessage}
+        </Alert>
+      )}
       {googErrorMessage && (
         <Alert severity="error" sx={{ marginTop: 2 }}>
           {googErrorMessage}
+        </Alert>
+      )}
+      {llamaErrorMessage && (
+        <Alert severity="error" sx={{ marginTop: 2 }}>
+          {llamaErrorMessage}
         </Alert>
       )}
       <Typography height={15}></Typography>

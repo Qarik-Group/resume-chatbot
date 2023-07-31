@@ -70,7 +70,7 @@ def get_user_id(user_email: str | None) -> str:
 
 
 def run_query(question: str, user_id: str, query_engine: Any, llm_backend: str) -> str:
-    """Run a query against the LLM model and return the answer."""
+    """Run a query against the LLM model."""
     try:
         logger.debug('Querying LLM...')
         answer = str(query_engine.query(question))
@@ -96,13 +96,14 @@ class AskInput(BaseModel):
     question: str
 
 
-@app.post('/ask_gpt')
 @log_params
-def ask_gpt(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
-    """Ask a question to the GPT-3 model and return the answer."""
+def ask_llm(data: AskInput,
+            provider: constants.LlmProvider,
+            x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the given LLM model."""
     question = data.question
     refresh_index()
-    query_engine = llm_tools.get_resume_query_engine(index_dir=INDEX_DIR)
+    query_engine = llm_tools.get_resume_query_engine(index_dir=INDEX_DIR, provider=provider)
     if query_engine is None:
         raise SystemError('No resumes found in the database. Please upload resumes.')
 
@@ -114,10 +115,31 @@ def ask_gpt(data: AskInput, x_goog_authenticated_user_email: Annotated[str | Non
     return {'answer': answer}
 
 
+@app.post('/ask_gpt')
+@log_params
+def ask_gpt(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the GPT-3 model and return the answer."""
+    return ask_llm(data=data, provider=constants.LlmProvider.OPEN_AI, x_goog_authenticated_user_email=x_goog_authenticated_user_email)
+
+
+@app.post('/ask_palm')
+@log_params
+def ask_palm(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the Google PaLM model."""
+    return ask_llm(data=data, provider=constants.LlmProvider.GOOGLE_PALM, x_goog_authenticated_user_email=x_goog_authenticated_user_email)
+
+
+@app.post('/ask_llama')
+@log_params
+def ask_llama(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the local Llama 2 model."""
+    return {'answer': 'Local Llama 2 is not implemented yet.'}
+
+
 @app.post('/ask_google')
 @log_params
 def ask_google(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
-    """Ask a question to the Google model and return the answer."""
+    """Ask a question to the Google Enterprise Search (Gen AI) model."""
     question = data.question
     user_id: str = get_user_id(x_goog_authenticated_user_email)
     answer: str = run_query(question=question,

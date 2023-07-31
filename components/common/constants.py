@@ -14,6 +14,7 @@
 """Project wide settings and constants."""
 
 from datetime import timezone
+from enum import Enum
 # from langchain.chains.prompt_selector import ConditionalPromptSelector, is_chat_model
 # from langchain.prompts.chat import AIMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
 # from llama_index.prompts.prompts import QuestionAnswerPrompt, RefinePrompt
@@ -51,21 +52,26 @@ TIMEZONE: timezone = timezone.utc
 #########################################################
 # LLM specific settings
 #########################################################
+class LlmProvider(Enum):
+    GOOGLE_PALM = 1
+    OPEN_AI = 2
+"""Which LLM provider to use."""
+
 # GPT_MODEL = 'text-davinci-003'
 # GPT_MODEL = 'gpt-3.5-turbo'
-GPT_MODEL = 'gpt-4'
-"""LLM model name to be used."""
+GPT_MODEL: str = 'gpt-4'
+"""Open AI model name to be used."""
 
-MAX_KEYWORDS_PER_CHUNK = 100
+MAX_KEYWORDS_PER_CHUNK: int = 100
 """Maximum number of keywords per chunk for Complex Query Graph."""
 
-CHUNK_SIZE = 1024
+CHUNK_SIZE: int = 1024
 """Maximum number of characters per chunk for Complex Query Graph."""
 
 TEMPERATURE = 0
 """Temperature for LLM model."""
 
-SIMILARITY_TOP_K = 50
+SIMILARITY_TOP_K: int = 50
 """Number of top similar documents to retrieve."""
 
 # Text QA templates

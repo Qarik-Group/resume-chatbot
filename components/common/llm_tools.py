@@ -41,12 +41,10 @@ DATA_LOAD_LOCK = threading.Lock()
 
 
 @log
-def get_llm() -> LLMPredictor:
+def get_llm(provider: constants.LlmProvider) -> LLMPredictor:
     """Return LLM predictor."""
-    use_google_palm = False
-    if use_google_palm:
-        # TODO: use PaLM instead of OpenAIChat: https://github.com/google/generative-ai-docs/blob/main/demos/palm/web/list-it/README.md
-        # palm.configure(api_key=solution.getenv('GOOGLE_PALM_API_KEY'))
+    if provider == constants.LlmProvider.GOOGLE_PALM:
+        # https://github.com/google/generative-ai-docs/blob/main/demos/palm/web/list-it/README.md
         llm = LLMPredictor(llm=PaLM(api_key=solution.getenv('GOOGLE_PALM_API_KEY')))
         # -------------------- DEBUG START
         # from llama_index.llms.palm import PaLM
@@ -55,8 +53,10 @@ def get_llm() -> LLMPredictor:
         # print(result)
         # exit(0)
         # -------------------- DEBUG END
-    else:
+    elif provider == constants.LlmProvider.OPEN_AI:
         llm = LLMPredictor(llm=OpenAIChat(temperature=constants.TEMPERATURE, model_name=constants.GPT_MODEL))
+    else:
+        raise ValueError(f'Unknown LLM provider: {provider}')
     return llm
 
 
@@ -168,9 +168,9 @@ def generate_embeddings(resume_dir: str, index_dir: str) -> None:
 
 
 @log_params
-def get_resume_query_engine(index_dir: str, resume_dir: str | None = None) -> BaseQueryEngine | None:
+def get_resume_query_engine(index_dir: str, provider: constants.LlmProvider, resume_dir: str | None = None) -> BaseQueryEngine | None:
     """Load the index from disk, or build it if it doesn't exist."""
-    llm = get_llm()
+    llm = get_llm(provider=provider)
     service_context = ServiceContext.from_defaults(llm_predictor=llm, chunk_size_limit=constants.CHUNK_SIZE)
 
     resumes: dict[str, List[Document]] = load_resumes(resume_dir=resume_dir, index_dir=index_dir)

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from common import googleai_tools, llm_tools
+from common import constants, googleai_tools, llm_tools
 from common.log import Logger, log
 
 logger = Logger(__name__).get_logger()
@@ -91,8 +91,10 @@ def main():
     print('*************************************************************************')
     print('********************** Testing Skills Query Bot *************************')
     print('*************************************************************************')
-
-    gpt_query_engine = llm_tools.get_resume_query_engine(index_dir='dev/tmp/embeddings', resume_dir='dev/tmp/resumes')
+    # provider = constants.LlmProvider.GOOGLE_PALM
+    provider = constants.LlmProvider.OPEN_AI
+    gpt_query_engine = llm_tools.get_resume_query_engine(
+        index_dir='dev/tmp/embeddings', resume_dir='dev/tmp/resumes', provider=provider)
 
     if gpt_query_engine is None:
         logger.error('No resumes found in the database. Please upload resumes or connect to the database.')
