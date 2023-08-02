@@ -306,9 +306,9 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    addMessage({ sender: "----------- QUESTION", text: "" });
+    addMessage({ sender: "-----------> QUESTION", text: "" });
     addMessage({ sender: userName, text: question });
-    addMessage({ sender: "----------- ANSWERS", text: "" });
+    addMessage({ sender: "<----------- ANSWERS", text: "" });
     callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
     callBackend(event, `${backendUrl}/ask_palm`, setPalmErrorMessage, answerPrefixPalm, setIsPalmLoading);
     callBackend(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
