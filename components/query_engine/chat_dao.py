@@ -13,10 +13,9 @@
 # limitations under the License.
 """Data Access Object to abstract access to the database from the rest of the app."""
 
-from datetime import datetime
 from typing import Any
 
-from common import constants, firestore_tools, solution
+from common import firestore_tools, solution
 from common.log import Logger, log
 from google.cloud import firestore  # type: ignore
 
@@ -24,14 +23,14 @@ logger = Logger(__name__).get_logger()
 
 
 class ChatDao:
-    """Device object that handles database persistence."""
+    """Device object that handles database persistence for user queries and LLM answers."""
 
     def __init__(self) -> None:
+        """Initialize the DAO with proper resources."""
         self._db = firestore_tools.create_firestore_client()
         self._collection = self._db.collection(f'{solution.RESOURCE_PREFIX}_users')
         """Firestore collection that keeps track of users known to the system."""
 
-    @log
     def _get_doc_ref_by_id(self, user_id: str) -> firestore.DocumentReference | None:
         """Find device Firestore Doc Ref by its ID. Return None if does not exist."""
         doc_ref = self._collection.document(user_id)
@@ -44,19 +43,16 @@ class ChatDao:
         doc_ref.set({'user_id': user_id, 'first_login': solution.now()})
         return doc_ref
 
-    @log
     def get_by_id(self, user_id: str) -> Any:
         """Find user by its ID."""
         doc_ref = self._get_doc_ref_by_id(user_id)
         return doc_ref.get().to_dict() if doc_ref is not None else None
 
-    @log
     def exists(self, user_id: str) -> bool:
         """Check for existence of the user by its ID."""
         doc_ref = self._get_doc_ref_by_id(user_id)
         return bool(doc_ref)
 
-    @log
     def save_question_answer(self, user_id: str, question: Any, answer: Any, llm_backend: str) -> Any:
         """Update user document."""
         doc_ref = self._get_doc_ref_by_id(user_id)
