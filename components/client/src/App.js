@@ -26,6 +26,7 @@ import {
   Drawer,
   TextField,
   Button,
+  Checkbox,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { styled } from "@mui/system";
@@ -59,6 +60,12 @@ const defaultBackendUrl = localHostBackend;
 let userName = null;
 const fakeIdToken = "fakeIdToken";
 
+// Which LLM engines to use
+let useGoogLlm = true;
+let usePalmLlm = true;
+let useGptLlm = true;
+let useLlamaLlm = true;
+
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [currentTab, setCurrentTab] = useState("Chat");
@@ -67,12 +74,34 @@ function App() {
   const [idToken, setIdToken] = useState(null);
   const [user, setUser] = useState([]);
 
+  // Which LLM engines to use - config
+  const [useGoog, setGoogLlm] = useState(useGoogLlm);
+  const [usePalm, setPalmLlm] = useState(usePalmLlm);
+  const [useGpt, setGptLlm] = useState(useGptLlm);
+  const [useLlama, setLlamaLlm] = useState(useLlamaLlm);
+
   const login = useGoogleLogin({
     onSuccess: (codeResponse) => setUser(codeResponse),
     onError: (error) => console.log("Login Failed:", error),
   });
 
   console.info(`DEBUG: backendUrl: ${backendUrl}, idToken: ${idToken}`);
+
+  useEffect(() => {
+    useGoogLlm = useGoog;
+  }, [useGoog]);
+
+  useEffect(() => {
+    usePalmLlm = usePalm;
+  }, [usePalm]);
+
+  useEffect(() => {
+    useLlamaLlm = useLlama;
+  }, [useLlama]);
+
+  useEffect(() => {
+    useGptLlm = useGpt;
+  }, [useGpt]);
 
   useEffect(() => {
     // If query engine is running locally or on unprotected Cloud Run, then use fake ID token and ignore user Auth
@@ -197,22 +226,37 @@ function App() {
                   overflowY: "auto",
                 }}
               >
-                <Typography variant="h5">System information</Typography>
-                <Typography height={30}></Typography>
                 <Typography>
-                  <b>Version:</b> 0.1.14
+                  <Checkbox
+                    checked={useGoog}
+                    onChange={(e) => setGoogLlm(e.target.checked)}
+                    inputProps={{ "aria-label": "controlled" }}
+                  />
+                  use Google Enterprise Search with summarization (private API hosted by Gen AI)
                 </Typography>
                 <Typography>
-                  <b>Software update:</b> July 20, 2023
+                  <Checkbox
+                    checked={useGpt}
+                    onChange={(e) => setGptLlm(e.target.checked)}
+                    inputProps={{ "aria-label": "controlled" }}
+                  />
+                  use Chat GPT 4.0 (public API hosted by OpenAI)
                 </Typography>
                 <Typography>
-                  <b>Author:</b> Roman Kharkovski (kharkovski@gmail.com)
+                  <Checkbox
+                    checked={usePalm}
+                    onChange={(e) => setPalmLlm(e.target.checked)}
+                    inputProps={{ "aria-label": "controlled" }}
+                  />
+                  use Google PaLM (public API hosted by Google)
                 </Typography>
                 <Typography>
-                  <b>Home page:</b> <a href="go/skills-bot">go/skills-bot</a>
-                </Typography>
-                <Typography>
-                  <b>Source code:</b> <a href="https://github.com/Qarik-Group/resume-chatbot">GitHub repo</a>
+                  <Checkbox
+                    checked={useLlama}
+                    onChange={(e) => setLlamaLlm(e.target.checked)}
+                    inputProps={{ "aria-label": "controlled" }}
+                  />
+                  use Meta Llama 2 (private instance hosted in this project)
                 </Typography>
                 <Typography height={50}></Typography>
                 <TextField
@@ -244,20 +288,25 @@ function App() {
 function Chat({ messages, addMessage, backendUrl, idToken }) {
   const [question, setQuestion] = useState("");
 
+  // Loading indicators for various LLM engines
   const [isGptLoading, setIsGptLoading] = useState(false);
   const [isPalmLoading, setIsPalmLoading] = useState(false);
   const [isGoogLoading, setIsGoogLoading] = useState(false);
   const [isLlamaLoading, setIsLlamaLoading] = useState(false);
 
+  // Error messages from various LLM engines
   const [gptErrorMessage, setGptErrorMessage] = useState("");
   const [palmErrorMessage, setPalmErrorMessage] = useState("");
   const [googErrorMessage, setGoogErrorMessage] = useState("");
   const [llamaErrorMessage, setLlamaErrorMessage] = useState("");
 
-  const answerPrefixGpt = "OpenAI (Chat GPT 4)";
+  // Prefixes for the answers from various LLM engines
+  const answerPrefixGpt = "Chat GPT";
   const answerPrefixPalm = "Google PaLM";
-  const answerPrefixGoog = "Google GenAI (Enterprise Search)";
-  const answerPrefixLlama = "Llama 2 (local)";
+  const answerPrefixGoog = "Google GenAI";
+  const answerPrefixLlama = "Llama 2";
+
+  // Which LLM engines to use
 
   const handleChange = (event) => {
     setQuestion(event.target.value);
@@ -299,6 +348,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         errorHandler(`Error from: ${url}, status: ${response.status}, error: ${error}`);
       }
     } catch (error) {
+      isLoading(false);
       console.error(`Error calling: ${url}, error: ${error}`);
       errorHandler(`Error calling: ${url}, error: ${error}`);
     }
@@ -309,10 +359,18 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
     addMessage({ sender: "-----------> QUESTION", text: "" });
     addMessage({ sender: userName, text: question });
     addMessage({ sender: "<----------- ANSWERS", text: "" });
-    callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
-    callBackend(event, `${backendUrl}/ask_palm`, setPalmErrorMessage, answerPrefixPalm, setIsPalmLoading);
-    callBackend(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
-    callBackend(event, `${backendUrl}/ask_llama`, setLlamaErrorMessage, answerPrefixLlama, setIsLlamaLoading);
+    if (useGptLlm) {
+      callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
+    }
+    if (usePalmLlm) {
+      callBackend(event, `${backendUrl}/ask_palm`, setPalmErrorMessage, answerPrefixPalm, setIsPalmLoading);
+    }
+    if (useLlamaLlm) {
+      callBackend(event, `${backendUrl}/ask_llama`, setLlamaErrorMessage, answerPrefixLlama, setIsLlamaLoading);
+    }
+    if (useGoogLlm) {
+      callBackend(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
+    }
     // Reset the question field to be empty - or comment this out to leave it with the previous question
     // setQuestion("");
   };
@@ -449,7 +507,19 @@ function Help() {
           overflowY: "auto",
         }}
       >
-        <Typography variant="h5">Access and security</Typography>
+        <Typography variant="h4">System information</Typography>
+        <Typography height={15}></Typography>
+        <Typography>Version: 0.1.15</Typography>
+        <Typography>Software update: August 3, 2023</Typography>
+        <Typography>Author: Roman Kharkovski (kharkovski@gmail.com)</Typography>
+        <Typography>
+          Source code: <a href="https://github.com/Qarik-Group/resume-chatbot">GitHub repo</a>
+        </Typography>
+        <Typography>
+          Production instance available for Qarik employees: <a href="https://go.qarik.com/skills-bot">go/skills-bot</a>
+        </Typography>
+        <Typography height={15}></Typography>
+        <Typography variant="h4">Access and security</Typography>
         <Typography height={15}></Typography>
         <Typography>
           The skills bot is available at <a href="go/skills-bot">go/skills-bot</a> to anyone who can authenticate to
@@ -457,7 +527,7 @@ function Help() {
           Aware Proxy. Nobody outside of Qarik can access the bot or the data.
         </Typography>
         <Typography height={15}></Typography>
-        <Typography variant="h5">How do I use this tool?</Typography>
+        <Typography variant="h4">How do I use this tool?</Typography>
         <Typography height={15}></Typography>
         <Typography>
           On the <a href="/Chat">Chat</a> tab, enter your query in plain English and press Enter. The bot will attempt
@@ -479,7 +549,7 @@ function Help() {
         <Typography>- Among all people, who has the most experience with Java and Kubernetes?</Typography>
         <Typography>- How many people have skills in Python and Machine Learning?</Typography>
         <Typography height={50}></Typography>
-        <Typography variant="h5">How does this app work?</Typography>
+        <Typography variant="h4">How does this app work?</Typography>
         <Typography height={15}></Typography>
         <Typography>
           The application is hosted on GCP as Cloud Run service. Resumes of multiple people uploaded in PDF format to
@@ -495,7 +565,7 @@ function Help() {
           in the future, or I need to be using it differently.
         </Typography>
         <Typography height={50}></Typography>
-        <Typography variant="h5">How do I submit feature requests and file bugs?</Typography>
+        <Typography variant="h4">How do I submit feature requests and file bugs?</Typography>
         <Typography height={15}></Typography>
         <Typography>
           If you found a bug, or have any ideas on how to improve this tool, please open an issue using project's{" "}
@@ -557,7 +627,7 @@ function Resumes({ backendUrl, idToken }) {
         overflowY: "auto",
       }}
     >
-      <Typography variant="h5">What resumes are available for queries?</Typography>
+      <Typography variant="h4">What resumes are available for queries?</Typography>
       {isLoading && (
         <Box
           sx={{

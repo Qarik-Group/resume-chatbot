@@ -14,9 +14,10 @@ limitations under the License. -->
 
 This project demonstrates the use of the following LLMs for the purpose of Q&A over PDF files with resumes:
 
-- ChatGPT
-- Google PALM
+- Open AI ChatGPT API
+- Google PaLM
 - Google Gen AI Enterprise Search
+- Meta Llama 2 local (work in progress)
 
 This project allows users to interact with resumes stored in PDF files and ask questions about a single person or a
 group of people in plain English. Example questions:
@@ -39,10 +40,10 @@ If you found a bug, or have any ideas on how to improve this tool, please
 
 ## How does this app work?
 
-The application is hosted on GCP as Cloud Run services. Resumes of multiple people uploaded in PDF format to the server
-(currently just keeping a local copy inside of the docker image, but really needs to be on Drive or GCS). The backend is
-built using Python and FastAPI. The bot uses OpenAI's LLM (Language Model) to generate answers to your queries. The bot
-also uses LlamaIndex framework with LangChain to extract data from resumes uploaded into the system.
+The application is hosted on GCP as Cloud Run services. Resumes of multiple people uploaded in PDF format to the GCS
+bucket and can be updated, deleted or changed at any time. The backend is built using Python and FastAPI. The bot uses
+several different LLM implementations to generate answers to your queries. The bot also uses LlamaIndex framework with
+LangChain to extract data from resumes uploaded into the system.
 
 This application can be run on Linux or MacOS locally, or deployed on GCP in two modes (controlled by the "ENABLE_IAP"
 flag in the root '.env' file):
@@ -54,14 +55,18 @@ flag in the root '.env' file):
 
 ![Resume chatbot architecture](./doc/images/architecture.png)
 
-_Note: Currently PDF files with resumes are statically stored locally in the [data](./components/server/data) directory
-of the backend container, but in the future will be loaded and dynamically updated via GCS._
+_Note: When developing or debugging on a local machine (UI and backend can run as a process or in a container), then PDF
+files with resumes are statically stored locally in file system. When running on GCP, the resume files are re-downloaded
+from the GCS bucket every time there is a change in one or more objects in the bucket._
 
 ## Prerequisites
 
 In order to build and deploy this project you need the following:
 
 - ChatGPT API key
+- Google PaLM key
+- Allow listed account for Google Gen AI Enterprise Search
+- Meta Llama 2 key
 - Install GCLoud SDK
 - Install Python 3.10+
 - Install npm
@@ -79,22 +84,20 @@ In order to build and deploy this project you need the following:
   git clone git@github.com:Qarik-Group/resume-chatbot.git "${PROJECT_HOME}"
   ```
 
-- Copy template environment files:
+- Copy template environment file:
 
   ```bash
   cp "${PROJECT_HOME}/.env.example" "${PROJECT_HOME}/.env"
-  cp "${PROJECT_HOME}/components/server/.env.example" "${PROJECT_HOME}/components/server/.env"
-  cp "${PROJECT_HOME}/components/client/.env.example" "${PROJECT_HOME}/components/client/.env"
   ```
 
-- Update all three '.env' files created above with your own values, including the
+- Update the '.env' file with your own values, including the
   [OpenAI API Key](https://platform.openai.com/account/api-keys). Also check the ENABLE_IAP setting and set it to "true"
   if you want to enable IAP in front of your Cloud Run instances. However be aware that the initial setup will take more
   than an hour because it takes that long to propagate the SSL certificate settings.
 
-- Add any number of PDF files with resumes to the [components/server/data](components/server/data/) folder. Files shall
-  be named using 'Firstname Lastname.pdf' format with space separating first and last name. Optionally you can append
-  'Resume' after last name. For example: 'Roman Kharkovski Resume.pdf'.
+- Add any number of PDF files with resumes to the [components/data](components/data/) folder. Files shall be named using
+  'Firstname Lastname.pdf' format with space separating first and last name. Optionally you can append 'Resume' after
+  last name. For example: 'Roman Kharkovski Resume.pdf'.
 
 - Complete the setup:
 
@@ -155,19 +158,26 @@ process (or as a local container), and run UI in a local NodeJS process (or a lo
 - Once you open the local client UI in your browser, navigate to the "Settings" menu option and update the "Backend URL"
   to point to your local server: [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
+## Deployment to GCP without IAP
+
 This assumes that the initial setup was done using the `ENABLE_IAP=false` in the .env file at the root directory.
 
-- Build and deploy the query engine backend to Cloud Run:
+- Build and deploy all components:
 
   ```bash
-  cd components/server/dev
+  cd $PROJECT_HOME
   ./deploy.sh
   ```
+
+Done!
+
+Optional - if you do not want to manually put a backend URL every time you open UI, you can permanently add backend UI
+URL to the page source code:
 
 - Update the [app.js](components/client/src/App.js) with the URL of your backend service deployed in the step above:
 
   ```javascript
-  const serverBackendUrl = "https://<put-your-Cloud-Run-URL-here>.a.run.app";
+  const serverBackendUrl = "https://<put-your-QUERY-ENGINE-CloudRun-URL-here>.a.run.app";
   ```
 
 - Build and deploy the UI service to Cloud Run:
@@ -181,10 +191,10 @@ This assumes that the initial setup was done using the `ENABLE_IAP=false` in the
 
 ## Deployment to GCP with IAP (advanced and more secure)
 
-- Build and deploy the server to Cloud Run:
+- Build and deploy all components:
 
   ```bash
-  cd components/server/dev
+  cd $PROJECT_HOME
   ./deploy.sh
   ```
 
