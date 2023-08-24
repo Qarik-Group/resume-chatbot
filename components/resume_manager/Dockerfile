@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM python:3.11.0-slim
+FROM python:3.11.4-slim
 
 ENV COMPONENT_NAME="resume_manager"
 ENV RUN_FILE="service"
@@ -19,10 +19,10 @@ ENV APP_USER="user1"
 ENV PATH="/home/$APP_USER/.local/bin:$PATH"
 ENV BASE_DIR="/app"
 # Allow statements and log messages to immediately appear in the Cloud Run logs
-ENV PYTHONUNBUFFERED True
+ENV PYTHONUNBUFFERED="True"
 
 # Create group:user to run the application
-RUN groupadd -g 6006 $APP_USER && useradd -m -r -u 6006 -g $APP_USER $APP_USER
+RUN groupadd $APP_USER && useradd -m -r -g $APP_USER $APP_USER
 
 RUN mkdir -p $BASE_DIR/$COMPONENT_NAME
 RUN chown $APP_USER $BASE_DIR

@@ -156,15 +156,14 @@ def _load_resume_index_summary(resumes: dict[str, Any]) -> dict[str, str]:
 
 
 @log_params
-def generate_embeddings(resume_dir: str, index_dir: str) -> None:
+def generate_embeddings(resume_dir: str, index_dir: str, provider: constants.LlmProvider) -> None:
     """Generate embeddings from PDF resumes."""
-    load_resumes(resume_dir=resume_dir, index_dir=index_dir)
-    # resumes = load_resumes(source_data_dir=resume_dir, index_dir=index_dir)
-    # if not resumes:
-    #     return None
-    # predictor = get_llm(model_name=constants.GPT_MODEL, temperature=constants.TEMPERATURE)
-    # context = ServiceContext.from_defaults(llm_predictor=predictor, chunk_size_limit=constants.CHUNK_SIZE_LIMIT)
-    # load_resume_indices(resumes=resumes, service_context=context, embeddings_dir=index_dir)
+    resumes = load_resumes(resume_dir=resume_dir, index_dir=index_dir)
+    if not resumes:
+        return None
+    predictor = get_llm(provider=provider)
+    context = ServiceContext.from_defaults(llm_predictor=predictor, chunk_size_limit=constants.CHUNK_SIZE)
+    load_resume_indices(resumes=resumes, service_context=context, embeddings_dir=index_dir)
 
 
 @log_params

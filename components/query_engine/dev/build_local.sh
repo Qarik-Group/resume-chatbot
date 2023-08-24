@@ -27,4 +27,4 @@ podman build -t "${IMAGE_NAME}:dev" . --log-level=debug
 # podman image prune -a -f
 
 # Delete all images from local docker registry
-# podman rmi $(docker images -a -q) -f
+# podman rmi $(podman images -a -q) -f

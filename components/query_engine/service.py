@@ -33,7 +33,7 @@ INDEX_BUCKET: str = solution.getenv('EMBEDDINGS_BUCKET_NAME')
 if LOCAL_DEVELOPMENT_MODE:
     INDEX_DIR: str = 'dev/tmp/embeddings'
 else:
-    INDEX_DIR: str = 'tmp/embeddings'
+    INDEX_DIR = 'tmp/embeddings'
 
 
 app = api_tools.ServiceAPI(title='Resume Chatbot API (experimental)',
@@ -172,8 +172,9 @@ def refresh_index():
     if LOCAL_DEVELOPMENT_MODE:
         index_path = Path(INDEX_DIR)
         if not index_path.exists():
+            # TODO - need to generate proper embeddings for each provider, not hard coded
             # Only generate embeddings if they do not exist
-            llm_tools.generate_embeddings(resume_dir='dev/tmp', index_dir=INDEX_DIR)
+            llm_tools.generate_embeddings(resume_dir='dev/tmp', index_dir=INDEX_DIR, provider=constants.LlmProvider.OPEN_AI)
         return
 
     global LAST_LOCAL_INDEX_UPDATE

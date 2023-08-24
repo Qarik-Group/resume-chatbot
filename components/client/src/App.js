@@ -51,11 +51,12 @@ const AppBarSpacer = styled("div")(({ theme }) => theme.mixins.toolbar);
 const localHostBackend = "http://127.0.0.1:5002";
 // eslint-disable-next-line no-unused-vars
 const cloudRunBackendProtectedIAP = "https://skillsbot-backend-ap5urm5kva-uc.a.run.app";
+// eslint-disable-next-line no-unused-vars
 const cloudRunBackendDev = "https://skillsbot-backend-l5ej3633iq-uc.a.run.app";
 // eslint-disable-next-line no-unused-vars
 const iapBackend = "https://34.95.89.166.nip.io";
 // Which backend URL to use as the default value
-const defaultBackendUrl = localHostBackend;
+const defaultBackendUrl = iapBackend;
 
 let userName = null;
 const fakeIdToken = "fakeIdToken";
@@ -110,6 +111,7 @@ function App() {
       userName = "Test User";
       console.info(`DEBUG: updating idToken to fakeIdToken: ${idToken}`);
     }
+    // eslint-disable-next-line
   }, [backendUrl]);
 
   useEffect(() => {
@@ -128,6 +130,7 @@ function App() {
         })
         .catch((err) => console.log(err));
     }
+    // eslint-disable-next-line
   }, [user]);
 
   const handleBackendUrlChange = (event) => {
@@ -509,8 +512,8 @@ function Help() {
       >
         <Typography variant="h4">System information</Typography>
         <Typography height={15}></Typography>
-        <Typography>Version: 0.1.15</Typography>
-        <Typography>Software update: August 3, 2023</Typography>
+        <Typography>Version: 0.1.16</Typography>
+        <Typography>Software update: August 5, 2023</Typography>
         <Typography>Author: Roman Kharkovski (kharkovski@gmail.com)</Typography>
         <Typography>
           Source code: <a href="https://github.com/Qarik-Group/resume-chatbot">GitHub repo</a>
@@ -553,22 +556,16 @@ function Help() {
         <Typography height={15}></Typography>
         <Typography>
           The application is hosted on GCP as Cloud Run service. Resumes of multiple people uploaded in PDF format to
-          the server (currently just keeping a local copy inside of the docker image, but really needs to be on Drive or
-          GCS). The backend is built using Python and FastAPI. The bot uses OpenAI's LLM (Language Model) to generate
-          answers to your queries. The bot also uses LlamaIndex framework with LangChain to extract data from resumes
-          uploaded into the system.
-        </Typography>
-        <Typography>
-          The reason the system is so slow for queries across multiple resumes, is that LlamaIndex runs a separate query
-          for each resume, and then combines the results. All this is done serially, with no parallelism. As the number
-          of resumes increases, this approach will not scale. It is not clear if LlamaIndex plans to address this issue
-          in the future, or I need to be using it differently.
+          the GCS bucket and can be updated at any time. The backend is built using Python and FastAPI. The chat bot
+          uses several different LLM implementations (ChatGPT API, Google PaLM, Google Enterprise Search, and local
+          Llama 2) to generate answers to your queries. The bot also uses LlamaIndex framework with LangChain to extract
+          data from resumes uploaded into the system.
         </Typography>
         <Typography height={50}></Typography>
         <Typography variant="h4">How do I submit feature requests and file bugs?</Typography>
         <Typography height={15}></Typography>
         <Typography>
-          If you found a bug, or have any ideas on how to improve this tool, please open an issue using project's{" "}
+          If you found a bug, or have any ideas for improvement, please open an issue using project's{" "}
           <a href="https://github.com/Qarik-Group/resume-chatbot/issues">GitHub Issues</a> page.
         </Typography>
       </Box>

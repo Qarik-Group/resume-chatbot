@@ -37,7 +37,6 @@ deploy() {
   # --vpc-connector "projects/${PROJECT_ID}/locations/${REGION}/connectors/${VPC_CONNECTOR_NAME}" \
 
   if [[ "${ENABLE_IAP}" == "true" ]]; then
-    # TODO: In some cases when the CLoud Run scales down to 0, the IAP has trouble waiking it up
     ARGS+=(--min-instances 0)
     ARGS+=(--ingress internal-and-cloud-load-balancing)
   else
