@@ -59,12 +59,25 @@ def delete_all_objects(bucket_name: str):
 @log_params
 def upload(bucket_name: str, local_dir: str) -> None:
     """Upload local files to GCS."""
+    logger.debug('Removing files from GCS embeddings bucket...')
     delete_all_objects(bucket_name=bucket_name)
+    logger.debug('Loading fresh index files into GCS embeddings bucket...')
+    # TODO - debug - Print contents of the 'local_dir' directory
+    logger.debug(f'---------------------------- Current dir: {os.getcwd()}')
+    logger.debug(f'Local dir: {local_dir}')
+    for root, _, files in os.walk(local_dir):
+        for file in files:
+            logger.debug(os.path.join(root, file))
+    # End debug
+
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
+    count: int = 0
     for root, _, files in os.walk(local_dir):
         for file in files:
             local_file_path = os.path.join(root, file)
             blob = bucket.blob(local_file_path.replace(f'{local_dir}/', ''))
             blob.upload_from_filename(local_file_path)
             logger.debug(f'File {local_file_path} uploaded to {local_file_path.replace(local_dir,"")}.')
+            count += 1
+    logger.info(f'Uploaded [{count}] files to GCS bucket {bucket_name}.')

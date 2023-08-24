@@ -288,7 +288,7 @@ create_firestore_instance() {
         --location="${FIRESTORE_LOCATION}" \
         --quiet 1>/dev/null
     fi
-    log "CHanging Firestore to Native mode..."
+    log "Changing Firestore to Native mode..."
     gcloud alpha firestore databases update \
       --project "${PROJECT_ID}" \
       --type=firestore-native
@@ -539,8 +539,18 @@ define_chat_svc_sa() {
 # Grant IAM roles to resume service account
 #############################################
 define_resume_svc_sa() {
+  local RESUME_SVC_SA_ROLES=(
+    roles/datastore.user
+  )
+
   create_sa "${RESUME_SVC_NAME}"
   local RESUME_SVC_EMAIL="${RESUME_SVC_NAME}-sa@${PROJECT_ID}.iam.gserviceaccount.com"
+
+  for role in "${RESUME_SVC_SA_ROLES[@]}"; do
+    log "Applying [${role}] to [${RESUME_SVC_EMAIL}]..."
+    gcloud -q projects add-iam-policy-binding "${PROJECT_ID}" \
+      --member="serviceAccount:${RESUME_SVC_EMAIL}" --role="${role}" &>/dev/null
+  done
 
   log "Granting GCS admin role to [${RESUME_SVC_EMAIL}] on bucket [${EMBEDDINGS_BUCKET_NAME}]..."
   gsutil iam ch "serviceAccount:${RESUME_SVC_EMAIL}:roles/storage.admin" "gs://${EMBEDDINGS_BUCKET_NAME}"
@@ -555,11 +565,13 @@ define_resume_svc_sa() {
 enable_apis() {
   log "Enable required GCP services..."
   gcloud services enable \
+    aiplatform.googleapis.com \
     appengine.googleapis.com \
     artifactregistry.googleapis.com \
     cloudbuild.googleapis.com \
     cloudidentity.googleapis.com \
     cloudresourcemanager.googleapis.com \
+    discoveryengine.googleapis.com \
     eventarc.googleapis.com \
     eventarcpublishing.googleapis.com \
     firestore.googleapis.com \
@@ -605,6 +617,11 @@ create_embeddings_bucket() {
 # Create custom Eventarc channel for chat history
 #############################################
 create_eventarc_chat_channel() {
+  # Check if channel exist, and if not, create it
+  if gcloud eventarc channels describe "${CHAT_CHANNEL}" --location "${REGION}" &>/dev/null; then
+    log "Eventarc channel already exists. Skipping..."
+    return
+  fi
   log "Creating Eventarc channel..."
   gcloud eventarc channels create "${CHAT_CHANNEL}" --location "${REGION}"
 }

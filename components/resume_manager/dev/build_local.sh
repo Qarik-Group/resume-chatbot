@@ -21,10 +21,10 @@ prepare_sources "${TMP}"
 cd "${TMP}" || exit
 
 log "Building docker image for running locally on MacOs..."
-podman build -t "${IMAGE_NAME}:dev" . --log-level=debug
+podman build -t "${IMAGE_NAME}:dev" . --log-level=DEBUG
 
 # Purge all images from local docker registry
 # podman image prune -a -f
 
 # Delete all images from local docker registry
-# podman rmi $(docker images -a -q) -f
+# podman rmi $(podman images -a -q) -f

@@ -30,8 +30,10 @@ group of people in plain English. Example questions:
 - Compare and contrast the skills of [person name1] and [person name2].
 - List all people with Kubernetes or GCP certifications.
 
-Qarik employees can use an IAP secured application loaded with resumes of Qarik employees here:
-[go/skills-bot](https://go/skills-bot). Here is an example of the UI running in a browser:
+Qarik employees can use an IAP secured application loaded with resumes of Qarik staff:
+[go/skills-bot](https://go/skills-bot).
+
+Here is an example of the UI running in a browser:
 
 ![Web UI screenshot with sample Q&A](./doc/images/chat-ui-screenshot.png)
 
@@ -80,7 +82,7 @@ In order to build and deploy this project you need the following:
 - Clone the repo
 
   ```bash
-  PROJECT_HOME=~/resume-chatbot
+  PROJECT_HOME="${HOME}/resume-chatbot"
   git clone git@github.com:Qarik-Group/resume-chatbot.git "${PROJECT_HOME}"
   ```
 
@@ -106,7 +108,7 @@ In order to build and deploy this project you need the following:
   ./setup.sh
   ```
 
-## Test query engine
+## Test query engine locally
 
 The experimentation with the queries can be done on a local machine:
 
@@ -120,7 +122,7 @@ The experimentation with the queries can be done on a local machine:
 - Run the set of pre-built tests against the query engine, or use it in the interactive mode:
 
   ```bash
-  cd components/server/dev
+  cd components/query_engine/dev
   ./test.sh
   ```
 
@@ -128,23 +130,23 @@ The experimentation with the queries can be done on a local machine:
 
 ## Development
 
-The development can be done on a local machine (everything, except for the ChatGPT itself), which can be your physical
+The development can be done on a local machine (everything, except for the remote APIs), which can be your physical
 machine, or a cloud based environment. You can run local Firestore emulator, the query engine server as the local Python
 process (or as a local container), and run UI in a local NodeJS process (or a local container):
 
 - In your terminal start the Firestore emulator:
 
   ```bash
-  cd "${PROJECT_HOME}/components/server/dev"
+  cd "${PROJECT_HOME}/components/query_engine/dev"
   ./firebase_emulator.sh
   ```
 
-- In another terminal window run the local instance of the server:
+- In another terminal window run the local instance of the query engine:
 
   ```bash
   cd "${PROJECT_HOME}"
   source .venv/bin/activate
-  cd components/server/dev
+  cd components/query_engine/dev
   ./run_local.sh
   ```
 
