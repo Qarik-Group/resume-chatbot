@@ -65,7 +65,7 @@ const fakeIdToken = "fakeIdToken";
 let useGoogLlm = true;
 let usePalmLlm = true;
 let useGptLlm = true;
-let useLlamaLlm = true;
+let useVertexLlm = true;
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -79,7 +79,7 @@ function App() {
   const [useGoog, setGoogLlm] = useState(useGoogLlm);
   const [usePalm, setPalmLlm] = useState(usePalmLlm);
   const [useGpt, setGptLlm] = useState(useGptLlm);
-  const [useLlama, setLlamaLlm] = useState(useLlamaLlm);
+  const [useVertex, setVertexLlm] = useState(useVertexLlm);
 
   const login = useGoogleLogin({
     onSuccess: (codeResponse) => setUser(codeResponse),
@@ -97,8 +97,8 @@ function App() {
   }, [usePalm]);
 
   useEffect(() => {
-    useLlamaLlm = useLlama;
-  }, [useLlama]);
+    useVertexLlm = useVertex;
+  }, [useVertex]);
 
   useEffect(() => {
     useGptLlm = useGpt;
@@ -235,7 +235,7 @@ function App() {
                     onChange={(e) => setGoogLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Google Enterprise Search with summarization (private API hosted by Gen AI)
+                  use Google Enterprise Search with summarization (API hosted by Google Gen AI in this GCP project)
                 </Typography>
                 <Typography>
                   <Checkbox
@@ -243,7 +243,7 @@ function App() {
                     onChange={(e) => setGptLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Chat GPT 4.0 (public API hosted by OpenAI)
+                  use Chat GPT 4.0 via Llama-Index (public API hosted by OpenAI)
                 </Typography>
                 <Typography>
                   <Checkbox
@@ -251,15 +251,15 @@ function App() {
                     onChange={(e) => setPalmLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Google PaLM (public API hosted by Google)
+                  use Google PaLM via Llama-Index (public API hosted by Google)
                 </Typography>
                 <Typography>
                   <Checkbox
-                    checked={useLlama}
-                    onChange={(e) => setLlamaLlm(e.target.checked)}
+                    checked={useVertex}
+                    onChange={(e) => setVertexLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Meta Llama 2 (private instance hosted in this project)
+                  use Google Vertex AI Bison LLM via Langchain (hosted in this project)
                 </Typography>
                 <Typography height={50}></Typography>
                 <TextField
@@ -295,19 +295,19 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
   const [isGptLoading, setIsGptLoading] = useState(false);
   const [isPalmLoading, setIsPalmLoading] = useState(false);
   const [isGoogLoading, setIsGoogLoading] = useState(false);
-  const [isLlamaLoading, setIsLlamaLoading] = useState(false);
+  const [isVertexLoading, setIsVertexLoading] = useState(false);
 
   // Error messages from various LLM engines
   const [gptErrorMessage, setGptErrorMessage] = useState("");
   const [palmErrorMessage, setPalmErrorMessage] = useState("");
   const [googErrorMessage, setGoogErrorMessage] = useState("");
-  const [llamaErrorMessage, setLlamaErrorMessage] = useState("");
+  const [vertexErrorMessage, setVertexErrorMessage] = useState("");
 
   // Prefixes for the answers from various LLM engines
   const answerPrefixGpt = "Chat GPT";
   const answerPrefixPalm = "Google PaLM";
   const answerPrefixGoog = "Google GenAI";
-  const answerPrefixLlama = "Llama 2";
+  const answerPrefixVertex = "Google VertexAI Bison";
 
   // Which LLM engines to use
 
@@ -368,8 +368,8 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
     if (usePalmLlm) {
       callBackend(event, `${backendUrl}/ask_palm`, setPalmErrorMessage, answerPrefixPalm, setIsPalmLoading);
     }
-    if (useLlamaLlm) {
-      callBackend(event, `${backendUrl}/ask_llama`, setLlamaErrorMessage, answerPrefixLlama, setIsLlamaLoading);
+    if (useVertexLlm) {
+      callBackend(event, `${backendUrl}/ask_vertex`, setVertexErrorMessage, answerPrefixVertex, setIsVertexLoading);
     }
     if (useGoogLlm) {
       callBackend(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
@@ -451,11 +451,11 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
             height: "50px",
           }}
         >
-          <Typography variant="body1">Processing request for Google...</Typography>
+          <Typography variant="body1">Processing request for Google Gen AI...</Typography>
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
-      {isLlamaLoading && (
+      {isVertexLoading && (
         <Box
           sx={{
             display: "flex",
@@ -464,7 +464,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
             height: "50px",
           }}
         >
-          <Typography variant="body1">Processing request for Llama 2 (local)...</Typography>
+          <Typography variant="body1">Processing request for Google VertexAX Bison...</Typography>
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
@@ -483,9 +483,9 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
           {googErrorMessage}
         </Alert>
       )}
-      {llamaErrorMessage && (
+      {vertexErrorMessage && (
         <Alert severity="error" sx={{ marginTop: 2 }}>
-          {llamaErrorMessage}
+          {vertexErrorMessage}
         </Alert>
       )}
       <Typography height={15}></Typography>
@@ -512,8 +512,8 @@ function Help() {
       >
         <Typography variant="h4">System information</Typography>
         <Typography height={15}></Typography>
-        <Typography>Version: 0.1.16</Typography>
-        <Typography>Software update: August 5, 2023</Typography>
+        <Typography>Client version: 0.1.17</Typography>
+        <Typography>Software update: August 24, 2023</Typography>
         <Typography>Author: Roman Kharkovski (kharkovski@gmail.com)</Typography>
         <Typography>
           Source code: <a href="https://github.com/Qarik-Group/resume-chatbot">GitHub repo</a>
@@ -557,9 +557,9 @@ function Help() {
         <Typography>
           The application is hosted on GCP as Cloud Run service. Resumes of multiple people uploaded in PDF format to
           the GCS bucket and can be updated at any time. The backend is built using Python and FastAPI. The chat bot
-          uses several different LLM implementations (ChatGPT API, Google PaLM, Google Enterprise Search, and local
-          Llama 2) to generate answers to your queries. The bot also uses LlamaIndex framework with LangChain to extract
-          data from resumes uploaded into the system.
+          uses several different LLM implementations (ChatGPT API, Google PaLM, Google Enterprise Search, and Google
+          VertexAI Bison) to generate answers to your queries. The bot also uses LlamaIndex framework with LangChain to
+          extract data from resumes uploaded into the system.
         </Typography>
         <Typography height={50}></Typography>
         <Typography variant="h4">How do I submit feature requests and file bugs?</Typography>

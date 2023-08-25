@@ -58,9 +58,11 @@ class LlmProvider(Enum):
 """Which LLM provider to use."""
 
 # GPT_MODEL = 'text-davinci-003'
-# GPT_MODEL = 'gpt-3.5-turbo'
-GPT_MODEL: str = 'gpt-4'
+GPT_MODEL = 'gpt-3.5-turbo'
+# GPT_MODEL: str = 'gpt-4'
 """Open AI model name to be used."""
+
+GOOGLE_PALM_MODEL_LOCAL: str = 'text-bison@001'
 
 MAX_KEYWORDS_PER_CHUNK: int = 100
 """Maximum number of keywords per chunk for Complex Query Graph."""
@@ -71,7 +73,7 @@ CHUNK_SIZE: int = 1024
 TEMPERATURE = 0
 """Temperature for LLM model."""
 
-SIMILARITY_TOP_K: int = 50
+SIMILARITY_TOP_K: int = 10
 """Number of top similar documents to retrieve."""
 
 # Text QA templates

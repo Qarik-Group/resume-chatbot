@@ -344,17 +344,25 @@ build() {
 # Create static external IP for load balancer
 #############################################
 reserve_ip() {
-  log "Reserving external IP for chat service..."
-  gcloud compute addresses create "${CHAT_SVC_NAME}-ip" \
-    --network-tier PREMIUM \
-    --ip-version IPV4 \
-    --global
+  if gcloud compute addresses list --filter="${CHAT_SVC_NAME}-ip" --format='value(name)'; then
+    log "External IP for chat service already exists. Skipping..."
+  else
+    log "Reserving external IP for chat service..."
+    gcloud compute addresses create "${CHAT_SVC_NAME}-ip" \
+      --network-tier PREMIUM \
+      --ip-version IPV4 \
+      --global
+  fi
 
-  log "Reserving external IP for UI service..."
-  gcloud compute addresses create "${UI_SVC_NAME}-ip" \
-    --network-tier PREMIUM \
-    --ip-version IPV4 \
-    --global
+  if gcloud compute addresses list --filter="${UI_SVC_NAME}-ip" --format='value(name)'; then
+    log "External IP for UI service already exists. Skipping..."
+  else
+    log "Reserving external IP for UI service..."
+    gcloud compute addresses create "${UI_SVC_NAME}-ip" \
+      --network-tier PREMIUM \
+      --ip-version IPV4 \
+      --global
+  fi
 }
 
 #############################################
@@ -364,11 +372,16 @@ create_ssl_certificate() {
   CHAT_DOMAIN=$(gcloud compute addresses list --filter "${CHAT_SVC_NAME}-ip" --format='value(ADDRESS)').nip.io
   UI_DOMAIN=$(gcloud compute addresses list --filter "${UI_SVC_NAME}-ip" --format='value(ADDRESS)').nip.io
 
-  log "Create a Google-managed SSL certificate resource..."
-  gcloud compute ssl-certificates create "${CERT}" \
-    --description "Skills bot certificate" \
-    --domains "${CHAT_DOMAIN},${UI_DOMAIN}" \
-    --global
+  # check if SSL certificate already exists
+  if gcloud compute ssl-certificates list --filter="${CERT}" --format='value(name)'; then
+    log "SSL certificate [${CERT}] already exists. Skipping..."
+  else
+    log "Create a Google-managed SSL certificate resource..."
+    gcloud compute ssl-certificates create "${CERT}" \
+      --description "Skills bot certificate" \
+      --domains "${CHAT_DOMAIN},${UI_DOMAIN}" \
+      --global
+  fi
 
   log "Provisioning a Google-managed certificate might take up to 60 minutes..." ${ECHO_WARNING}
 }
@@ -519,7 +532,9 @@ create_iap() {
 #############################################
 define_chat_svc_sa() {
   local CHAT_SVC_SA_ROLES=(
+    roles/aiplatform.user
     roles/datastore.user
+    roles/discoveryengine.viewer
   )
 
   create_sa "${CHAT_SVC_NAME}"
@@ -533,6 +548,9 @@ define_chat_svc_sa() {
 
   log "Granting GCS reader role to [${CHAT_SVC_EMAIL}] on bucket [${EMBEDDINGS_BUCKET_NAME}]..."
   gsutil iam ch "serviceAccount:${CHAT_SVC_EMAIL}:roles/storage.objectViewer" "gs://${EMBEDDINGS_BUCKET_NAME}"
+
+  log "Granting GCS reader role to [${CHAT_SVC_EMAIL}] on bucket [${RESUME_BUCKET_NAME}]..."
+  gsutil iam ch "serviceAccount:${CHAT_SVC_EMAIL}:roles/storage.objectViewer" "gs://${RESUME_BUCKET_NAME}"
 }
 
 #############################################

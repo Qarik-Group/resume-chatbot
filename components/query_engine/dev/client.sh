@@ -20,6 +20,10 @@ source "../../../setenv.sh"
 # gcurl -i "${CHAT_SVC_DEV_URL}/people"
 
 log "Ask a question about a person..."
+# gcurl -i -X POST \
+#   -d "{\"question\":\"What is email of Steven Kim?\"}" \
+#   "${CHAT_SVC_DEV_URL}/ask_vertex"
+
 gcurl -i -X POST \
   -d "{\"question\":\"Where does Roman Kharkovski live?\"}" \
   "${CHAT_SVC_DEV_URL}/ask_gpt"
