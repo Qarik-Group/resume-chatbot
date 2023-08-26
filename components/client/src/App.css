@@ -24,8 +24,72 @@
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+h3 {
+  font-size: 36px !important;
+}
+
+h4 {
+  color: #90caf9;
+  font-size: 24px !important;
+}
+
+a {
+  color: #90caf9;
+}
+
+/* Hyperlink color when visited */
+a:visited {
+  color: #4b7bbf;
+}
+
+.message {
+  padding: 5px;
+  margin: 5px 0;
+  border-radius: 4px;
+}
+
+.message.user {
+  background-color: #121212; /* A light blue color for user messages */
+  width: 100%;
+}
+
+.message.server {
+  background-color: #333333; /* A light purple color for server messages */
+}
+
+.message.user .prefix {
+  color: #39ff15;
+}
+
+.message.server .prefix {
+  color: #90caf9;
+}
+
+.feedback-icons span {
+  cursor: pointer;
+  margin: 0 5px;
+}
+
+.fade-message-success {
+  color: white;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.fade-message-success.active {
+  color: white;
+  opacity: 1;
+}
+
+.fade-message-error {
+  color: red;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.fade-message-error.active {
+  color: red;
+  opacity: 1;
 }
 
 @keyframes App-logo-spin {

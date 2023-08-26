@@ -24,5 +24,6 @@ uvicorn service:app --reload --port "${QUERY_ENG_DEV_PORT}"
 # podman run --env-file ../../../.env \
 #   --env "PORT=${PORT}" \
 #   --env "LOG_LEVEL=${LOG_LEVEL}" \
+#   --env "LOCAL_DEVELOPMENT_MODE=True" \
 #   -p "${QUERY_ENG_DEV_PORT}:${PORT}" \
 #   --rm "${IMAGE_NAME}:dev"

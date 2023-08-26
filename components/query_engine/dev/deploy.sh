@@ -26,12 +26,14 @@ deploy() {
     --region "${REGION}"
     --project "${PROJECT_ID}"
     --set-env-vars "OPENAI_API_KEY=${OPENAI_API_KEY}"
+    --set-env-vars "GOOGLE_PALM_API_KEY=${GOOGLE_PALM_API_KEY}"
     --set-env-vars "EMBEDDINGS_BUCKET_NAME=${EMBEDDINGS_BUCKET_NAME}"
+    --set-env-vars "RESUME_BUCKET_NAME=${RESUME_BUCKET_NAME}"
     --set-env-vars "PROJECT_ID=${PROJECT_ID}"
     --set-env-vars "LOG_LEVEL=DEBUG"
     --allow-unauthenticated
   )
-  # --ingress all
+
   # The lines below only needed if using Serverless VPC Connector
   # --vpc-egress all-traffic
   # --vpc-connector "projects/${PROJECT_ID}/locations/${REGION}/connectors/${VPC_CONNECTOR_NAME}" \

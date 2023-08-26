@@ -30,7 +30,7 @@ app = api_tools.ServiceAPI(title='Resume PDF Manager', description='Eventarc han
 # In case you need to print the log of all inbound HTTP headers
 app.router.route_class = api_tools.DebugHeaders
 
-
+# TODO - need to be able to handle many concurrent deletes or updates to avoid concurrent generation of embeddings
 @app.post('/resumes', name='Handle Eventarc events.')
 @log_params
 def update_embeddings(event_data: dict = fastapi.Body()) -> dict:

@@ -13,6 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License. */
 
 import React, { useState, useEffect } from "react";
+import { BarElement, BarController, Chart, CategoryScale, LinearScale } from "chart.js";
+import { Bar } from "react-chartjs-2";
+
 import Alert from "@mui/material/Alert";
 import {
   Box,
@@ -33,6 +36,7 @@ import { styled } from "@mui/system";
 import { CircularProgress } from "@mui/material";
 import { useGoogleLogin } from "@react-oauth/google";
 import GoogleButton from "react-google-button";
+import "./App.css";
 
 import axios from "axios";
 
@@ -56,16 +60,67 @@ const cloudRunBackendDev = "https://skillsbot-backend-l5ej3633iq-uc.a.run.app";
 // eslint-disable-next-line no-unused-vars
 const iapBackend = "https://34.95.89.166.nip.io";
 // Which backend URL to use as the default value
-const defaultBackendUrl = iapBackend;
+const defaultBackendUrl = localHostBackend;
 
+// User name to display in the chat window
 let userName = null;
 const fakeIdToken = "fakeIdToken";
+
+// Current voting stats for all different LLM engines
+let llmVotingStats = null;
 
 // Which LLM engines to use
 let useGoogLlm = true;
 let usePalmLlm = true;
 let useGptLlm = true;
-let useLlamaLlm = true;
+let useVertexLlm = true;
+
+Chart.register(CategoryScale, LinearScale, BarElement, BarController);
+
+const ChartComponent = ({ data }) => {
+  // Extracting data from the provided prop
+  const names = data.map((item) => item.name);
+  const upVotes = data.map((item) => item.up);
+  const downVotes = data.map((item) => item.down);
+
+  const chartData = {
+    labels: names,
+    datasets: [
+      {
+        label: "Upvotes",
+        data: upVotes,
+        backgroundColor: "#39ff15", // You can customize this color
+        borderWidth: 1,
+      },
+      {
+        label: "Downvotes",
+        data: downVotes,
+        backgroundColor: "#d83f3f", // You can customize this color
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  return (
+    <div>
+      <Bar
+        data={chartData}
+        options={{
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: false,
+              stacked: true, // Enable this for stacking
+            },
+            x: {
+              stacked: true, // Enable this for stacking
+            },
+          },
+        }}
+      />
+    </div>
+  );
+};
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -75,11 +130,11 @@ function App() {
   const [idToken, setIdToken] = useState(null);
   const [user, setUser] = useState([]);
 
-  // Which LLM engines to use - config
+  // Whether or not use particular LLM engine
   const [useGoog, setGoogLlm] = useState(useGoogLlm);
   const [usePalm, setPalmLlm] = useState(usePalmLlm);
   const [useGpt, setGptLlm] = useState(useGptLlm);
-  const [useLlama, setLlamaLlm] = useState(useLlamaLlm);
+  const [useVertex, setVertexLlm] = useState(useVertexLlm);
 
   const login = useGoogleLogin({
     onSuccess: (codeResponse) => setUser(codeResponse),
@@ -97,8 +152,8 @@ function App() {
   }, [usePalm]);
 
   useEffect(() => {
-    useLlamaLlm = useLlama;
-  }, [useLlama]);
+    useVertexLlm = useVertex;
+  }, [useVertex]);
 
   useEffect(() => {
     useGptLlm = useGpt;
@@ -144,9 +199,18 @@ function App() {
     }
   };
 
-  const addMessage = (message) => {
-    setMessages((prevMessages) => [...prevMessages, message]);
-  };
+  function addMessage(role, sender, text) {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        role: role,
+        sender: sender,
+        text: text,
+        upvoted: false,
+        downvoted: false,
+      },
+    ]);
+  }
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -190,7 +254,7 @@ function App() {
         >
           <AppBarSpacer />
           <List>
-            {["Chat", "Resumes", "Settings", "Help"].map((text) => (
+            {["Chat", "Resumes", "Config", "Stats", "Help"].map((text) => (
               <ListItem button key={text} onClick={() => handleTabChange(text)}>
                 <ListItemText primary={text} />
               </ListItem>
@@ -216,7 +280,7 @@ function App() {
           </Box>
         )}
         <Box sx={{ width: "100%" }}>
-          {currentTab === "Settings" && (
+          {currentTab === "Config" && (
             <Box>
               <Box
                 sx={{
@@ -229,13 +293,15 @@ function App() {
                   overflowY: "auto",
                 }}
               >
+                <Typography variant="h3">Config</Typography>
+                <Typography height={15}></Typography>
                 <Typography>
                   <Checkbox
                     checked={useGoog}
                     onChange={(e) => setGoogLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Google Enterprise Search with summarization (private API hosted by Gen AI)
+                  use Google Enterprise Search with summarization (API hosted by Google Gen AI in this GCP project)
                 </Typography>
                 <Typography>
                   <Checkbox
@@ -243,7 +309,7 @@ function App() {
                     onChange={(e) => setGptLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Chat GPT 4.0 (public API hosted by OpenAI)
+                  use Chat GPT 4.0 via Llama-Index (public API hosted by OpenAI)
                 </Typography>
                 <Typography>
                   <Checkbox
@@ -251,17 +317,17 @@ function App() {
                     onChange={(e) => setPalmLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Google PaLM (public API hosted by Google)
+                  use Google PaLM via Llama-Index (public API hosted by Google)
                 </Typography>
                 <Typography>
                   <Checkbox
-                    checked={useLlama}
-                    onChange={(e) => setLlamaLlm(e.target.checked)}
+                    checked={useVertex}
+                    onChange={(e) => setVertexLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Meta Llama 2 (private instance hosted in this project)
+                  use Google Vertex AI Bison LLM via Langchain (hosted in this project)
                 </Typography>
-                <Typography height={50}></Typography>
+                <Typography height={20}></Typography>
                 <TextField
                   label="Backend REST API URL"
                   value={backendUrl}
@@ -274,6 +340,23 @@ function App() {
                   your development instance.
                 </Typography>
               </Box>
+            </Box>
+          )}
+        </Box>
+        <Box sx={{ width: "100%" }}>
+          {currentTab === "Stats" && (
+            <Box>
+              <Typography variant="h3">Voting results</Typography>
+              <Typography height={15}></Typography>
+              {llmVotingStats && (
+                <div>
+                  <Typography>Aggregated user votes for the accuracy of responses.</Typography>
+                  <ChartComponent data={llmVotingStats} style={{ width: "1900px", height: "900px" }} />
+                </div>
+              )}
+              {!llmVotingStats && (
+                <Typography>You must vote on at least one answer in order to see voting results.</Typography>
+              )}
             </Box>
           )}
         </Box>
@@ -295,19 +378,19 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
   const [isGptLoading, setIsGptLoading] = useState(false);
   const [isPalmLoading, setIsPalmLoading] = useState(false);
   const [isGoogLoading, setIsGoogLoading] = useState(false);
-  const [isLlamaLoading, setIsLlamaLoading] = useState(false);
+  const [isVertexLoading, setIsVertexLoading] = useState(false);
 
   // Error messages from various LLM engines
   const [gptErrorMessage, setGptErrorMessage] = useState("");
   const [palmErrorMessage, setPalmErrorMessage] = useState("");
   const [googErrorMessage, setGoogErrorMessage] = useState("");
-  const [llamaErrorMessage, setLlamaErrorMessage] = useState("");
+  const [vertexErrorMessage, setVertexErrorMessage] = useState("");
 
   // Prefixes for the answers from various LLM engines
   const answerPrefixGpt = "Chat GPT";
   const answerPrefixPalm = "Google PaLM";
   const answerPrefixGoog = "Google GenAI";
-  const answerPrefixLlama = "Llama 2";
+  const answerPrefixVertex = "Google VertexAI Bison";
 
   // Which LLM engines to use
 
@@ -315,7 +398,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
     setQuestion(event.target.value);
   };
 
-  const callBackend = async (event, url, errorHandler, answerPrefix, isLoading) => {
+  const callBackendLlm = async (event, url, errorHandler, answerPrefix, isLoading) => {
     event.preventDefault();
     try {
       errorHandler("");
@@ -338,7 +421,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         const data = await response.json();
         const answer = data.answer;
         // Add the server's response to the chat history
-        addMessage({ sender: answerPrefix, text: answer });
+        addMessage("server", answerPrefix, answer);
       } else {
         const contentType = response.headers.get("Content-Type");
         let error;
@@ -359,24 +442,109 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    addMessage({ sender: "-----------> QUESTION", text: "" });
-    addMessage({ sender: userName, text: question });
-    addMessage({ sender: "<----------- ANSWERS", text: "" });
+    addMessage("user", userName, question);
     if (useGptLlm) {
-      callBackend(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
+      callBackendLlm(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
     }
     if (usePalmLlm) {
-      callBackend(event, `${backendUrl}/ask_palm`, setPalmErrorMessage, answerPrefixPalm, setIsPalmLoading);
+      callBackendLlm(event, `${backendUrl}/ask_palm`, setPalmErrorMessage, answerPrefixPalm, setIsPalmLoading);
     }
-    if (useLlamaLlm) {
-      callBackend(event, `${backendUrl}/ask_llama`, setLlamaErrorMessage, answerPrefixLlama, setIsLlamaLoading);
+    if (useVertexLlm) {
+      callBackendLlm(event, `${backendUrl}/ask_vertex`, setVertexErrorMessage, answerPrefixVertex, setIsVertexLoading);
     }
     if (useGoogLlm) {
-      callBackend(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
+      callBackendLlm(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
     }
     // Reset the question field to be empty - or comment this out to leave it with the previous question
     // setQuestion("");
   };
+
+  const [showVoteResultMessageSuccess, setShowVoteResultMessageSuccess] = useState(false);
+  const [showVoteResultMessageError, setShowVoteResultMessageError] = useState(false);
+
+  const displayVoteResultMessageSuccess = () => {
+    setShowVoteResultMessageSuccess(true);
+    setTimeout(() => {
+      setShowVoteResultMessageSuccess(false);
+    }, 1000); // fade out after 1 second
+  };
+
+  const displayVoteResultMessageError = () => {
+    setShowVoteResultMessageError(true);
+    setTimeout(() => {
+      setShowVoteResultMessageError(false);
+    }, 1000); // fade out after 1 second
+  };
+
+  const callBackendVote = async (message, index) => {
+    const url = `${backendUrl}/vote`;
+    // Loop back in 'messages' until we find the role of user question
+    let user_index = index - 1;
+    while (user_index > 0 && messages[user_index].role !== "user") {
+      user_index--;
+    }
+    const question = messages[user_index].text;
+    // const question = messages[index].text;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        credentials: idToken === fakeIdToken ? "omit" : "include",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+          Accept: "application/json, text/plain, */*",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Credentials": true,
+        },
+        // body: JSON.stringify(message),
+        body: JSON.stringify({
+          llm_backend: message.sender,
+          question: question,
+          answer: message.text,
+          upvoted: message.upvoted,
+          downvoted: message.downvoted,
+        }),
+      });
+
+      if (response.ok) {
+        llmVotingStats = await response.json();
+        console.info(`DEBUG: llmStats: ${JSON.stringify(llmVotingStats)}`);
+        displayVoteResultMessageSuccess();
+      } else {
+        displayVoteResultMessageError();
+        const contentType = response.headers.get("Content-Type");
+        let error;
+        if (contentType && contentType.includes("application/json")) {
+          error = JSON.stringify(await response.json());
+        } else {
+          error = await response.text();
+        }
+        console.error(`Error from: ${url}, status: ${response.status}, error: ${error}`);
+      }
+    } catch (error) {
+      console.error(`Error calling: ${url}, error: ${error}`);
+    }
+  };
+
+  function handleUpvote(index) {
+    const updatedMessages = [...messages];
+    if (!updatedMessages[index].upvoted) {
+      updatedMessages[index].upvoted = true;
+      updatedMessages[index].downvoted = false;
+      console.info(`DEBUG: upvoted message: ${JSON.stringify(updatedMessages[index])}`);
+      callBackendVote(updatedMessages[index], index);
+    }
+  }
+
+  function handleDownvote(index) {
+    const updatedMessages = [...messages];
+    if (!updatedMessages[index].downvoted) {
+      updatedMessages[index].downvoted = true;
+      updatedMessages[index].upvoted = false;
+      console.info(`DEBUG: upvoted message: ${JSON.stringify(updatedMessages[index])}`);
+      callBackendVote(updatedMessages[index], index);
+    }
+  }
 
   return (
     <Box>
@@ -395,10 +563,15 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         }}
       >
         {messages.map((message, index) => (
-          <Typography key={index} variant="body1" gutterBottom>
-            <b>{message.sender}:</b> {message.text}
-            {message.sender === answerPrefixGpt && <Typography height={20}></Typography>}
-          </Typography>
+          <div key={index} className={`message ${message.role.toLowerCase()}`}>
+            <span className="prefix">{message.sender}</span>: {message.text}
+            {message.role === "server" && (
+              <span className="feedback-icons">
+                <span onClick={() => handleUpvote(index)}> 👍</span>
+                <span onClick={() => handleDownvote(index)}>👎</span>
+              </span>
+            )}
+          </div>
         ))}
       </Box>
       <form onSubmit={handleSubmit}>
@@ -451,11 +624,11 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
             height: "50px",
           }}
         >
-          <Typography variant="body1">Processing request for Google...</Typography>
+          <Typography variant="body1">Processing request for Google Gen AI...</Typography>
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
-      {isLlamaLoading && (
+      {isVertexLoading && (
         <Box
           sx={{
             display: "flex",
@@ -464,7 +637,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
             height: "50px",
           }}
         >
-          <Typography variant="body1">Processing request for Llama 2 (local)...</Typography>
+          <Typography variant="body1">Processing request for Google VertexAX Bison...</Typography>
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
@@ -483,14 +656,22 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
           {googErrorMessage}
         </Alert>
       )}
-      {llamaErrorMessage && (
+      {vertexErrorMessage && (
         <Alert severity="error" sx={{ marginTop: 2 }}>
-          {llamaErrorMessage}
+          {vertexErrorMessage}
         </Alert>
       )}
       <Typography height={15}></Typography>
       <Typography fontSize={11} color={"grey"}>
         This is an experimental product and is prone to hallucinations and errors. Use at your own risk.
+      </Typography>
+      <Typography>
+        <div className={showVoteResultMessageSuccess ? "fade-message-success active" : "fade-message-success"}>
+          Your vote has been registered.
+        </div>
+        <div className={showVoteResultMessageError ? "fade-message-error active" : "fade-message-error"}>
+          Error registering your vote. Something may be wrong with the server.
+        </div>
       </Typography>
     </Box>
   );
@@ -510,24 +691,21 @@ function Help() {
           overflowY: "auto",
         }}
       >
-        <Typography variant="h4">System information</Typography>
+        <Typography variant="h3">Help and system information</Typography>
         <Typography height={15}></Typography>
-        <Typography>Version: 0.1.16</Typography>
-        <Typography>Software update: August 5, 2023</Typography>
+        <Typography>Client version: 0.1.18</Typography>
+        <Typography>Software update: August 25, 2023</Typography>
         <Typography>Author: Roman Kharkovski (kharkovski@gmail.com)</Typography>
         <Typography>
           Source code: <a href="https://github.com/Qarik-Group/resume-chatbot">GitHub repo</a>
-        </Typography>
-        <Typography>
-          Production instance available for Qarik employees: <a href="https://go.qarik.com/skills-bot">go/skills-bot</a>
         </Typography>
         <Typography height={15}></Typography>
         <Typography variant="h4">Access and security</Typography>
         <Typography height={15}></Typography>
         <Typography>
-          The skills bot is available at <a href="go/skills-bot">go/skills-bot</a> to anyone who can authenticate to
-          Google with the company domain id. The frontend web UI and backend REST APIs are protected by Google Identity
-          Aware Proxy. Nobody outside of Qarik can access the bot or the data.
+          Production instance available for Qarik employees with corporate SSO login:{" "}
+          <a href="https://go.qarik.com/skills-bot">go/skills-bot</a>. The frontend web UI and backend REST APIs are
+          protected by Google Identity Aware Proxy. Nobody outside of Qarik can access the bot or the data.
         </Typography>
         <Typography height={15}></Typography>
         <Typography variant="h4">How do I use this tool?</Typography>
@@ -551,17 +729,17 @@ function Help() {
         <Typography>- What is the most common skill among all people who provided their resume?</Typography>
         <Typography>- Among all people, who has the most experience with Java and Kubernetes?</Typography>
         <Typography>- How many people have skills in Python and Machine Learning?</Typography>
-        <Typography height={50}></Typography>
+        <Typography height={15}></Typography>
         <Typography variant="h4">How does this app work?</Typography>
         <Typography height={15}></Typography>
         <Typography>
           The application is hosted on GCP as Cloud Run service. Resumes of multiple people uploaded in PDF format to
           the GCS bucket and can be updated at any time. The backend is built using Python and FastAPI. The chat bot
-          uses several different LLM implementations (ChatGPT API, Google PaLM, Google Enterprise Search, and local
-          Llama 2) to generate answers to your queries. The bot also uses LlamaIndex framework with LangChain to extract
-          data from resumes uploaded into the system.
+          uses several different LLM implementations (ChatGPT API, Google PaLM, Google Enterprise Search, and Google
+          VertexAI Bison) to generate answers to your queries. The bot also uses LlamaIndex framework with LangChain to
+          extract data from resumes uploaded into the system.
         </Typography>
-        <Typography height={50}></Typography>
+        <Typography height={15}></Typography>
         <Typography variant="h4">How do I submit feature requests and file bugs?</Typography>
         <Typography height={15}></Typography>
         <Typography>
@@ -624,7 +802,7 @@ function Resumes({ backendUrl, idToken }) {
         overflowY: "auto",
       }}
     >
-      <Typography variant="h4">What resumes are available for queries?</Typography>
+      <Typography variant="h4">List of resumes available for queries</Typography>
       {isLoading && (
         <Box
           sx={{
