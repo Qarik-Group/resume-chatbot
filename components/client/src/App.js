@@ -60,7 +60,7 @@ const cloudRunBackendDev = "https://skillsbot-backend-l5ej3633iq-uc.a.run.app";
 // eslint-disable-next-line no-unused-vars
 const iapBackend = "https://34.95.89.166.nip.io";
 // Which backend URL to use as the default value
-const defaultBackendUrl = localHostBackend;
+const defaultBackendUrl = iapBackend;
 
 // User name to display in the chat window
 let userName = null;
@@ -343,7 +343,7 @@ function App() {
             </Box>
           )}
         </Box>
-        <Box sx={{ width: "100%" }}>
+        <Box sx={{ width: "80%", height: "80%" }}>
           {currentTab === "Stats" && (
             <Box>
               <Typography variant="h3">Voting results</Typography>
@@ -351,7 +351,7 @@ function App() {
               {llmVotingStats && (
                 <div>
                   <Typography>Aggregated user votes for the accuracy of responses.</Typography>
-                  <ChartComponent data={llmVotingStats} style={{ width: "1900px", height: "900px" }} />
+                  <ChartComponent data={llmVotingStats}/>
                 </div>
               )}
               {!llmVotingStats && (
