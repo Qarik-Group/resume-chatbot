@@ -99,7 +99,7 @@ def get_user_id(user_email: str | None) -> str:
     return user_id
 
 
-def run_query(question: Any, user_id: str, query_method: Any, llm_backend) -> Any:
+def run_query(question: Any, user_id: str, query_method: Any, llm_backend: str) -> Any:
     """Run a query against the LLM model."""
     try:
         logger.debug(f'Querying LLM [{llm_backend}]...')
@@ -108,7 +108,7 @@ def run_query(question: Any, user_id: str, query_method: Any, llm_backend) -> An
         logger.error('Error querying LLM: %s', e)
         try:
             _db.save_question_answer(user_id=user_id,
-                                     question=question,
+                                     question=str(question),
                                      answer=f'Error querying LLM: {e}',
                                      llm_backend=llm_backend)
         except Exception:
@@ -116,14 +116,40 @@ def run_query(question: Any, user_id: str, query_method: Any, llm_backend) -> An
         raise SystemError('Error querying LLM: %s' % e)
 
     _db.save_question_answer(user_id=user_id,
-                             question=question,
-                             answer=answer,
+                             question=str(question),
+                             answer=str(answer),
                              llm_backend=llm_backend)
     return answer
 
 
 class AskInput(BaseModel):
+    """Input parameters for the ask endpoint."""
     question: str
+
+
+class VoteInput(BaseModel):
+    """Input parameters for the vote endpoint."""
+    llm_backend: str
+    question: str
+    answer: str
+    upvoted: bool
+    downvoted: bool
+
+
+@app.get('/people')
+@log_params
+def list_people() -> list[str]:
+    """List all people names found in the database of uploaded resumes."""
+    refresh_llama_index()
+    people = llm_tools.load_resumes(resume_dir='', index_dir=LLAMA_INDEX_DIR)
+    return [person for person in people.keys()]
+
+
+@app.get('/health', name='Health check and information about the software version and configuration.')
+@log_params
+def healthcheck() -> dict:
+    """Verify that the process is up without testing backend connections."""
+    return solution.health_status()
 
 
 @log_params
@@ -172,22 +198,6 @@ def ask_google(data: AskInput, x_goog_authenticated_user_email: Annotated[str | 
     return {'answer': str(answer)}
 
 
-@app.get('/people')
-@log_params
-def list_people() -> list[str]:
-    """List all people names found in the database of uploaded resumes."""
-    refresh_llama_index()
-    people = llm_tools.load_resumes(resume_dir='', index_dir=LLAMA_INDEX_DIR)
-    return [person for person in people.keys()]
-
-
-@app.get('/health', name='Health check and information about the software version and configuration.')
-@log_params
-def healthcheck() -> dict:
-    """Verify that the process is up without testing backend connections."""
-    return solution.health_status()
-
-
 @app.post('/ask_vertex')
 @log_params
 def ask_local(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
@@ -200,6 +210,25 @@ def ask_local(data: AskInput, x_goog_authenticated_user_email: Annotated[str | N
                        llm_backend=f'Local LLM [{constants.GOOGLE_PALM_MODEL_LOCAL}]')
     # return {'answer': str(answer)}
     return {'answer': answer['result']}
+
+
+@app.post('/vote')
+@log_params
+def vote(data: VoteInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> list:
+    """Ask a question to the local LLM model."""
+    return [{'name': 'ChatGPT',
+             'up': 11,
+             'down': -22, },
+            {'name': 'Google Enterprise Search',
+             'up': 33,
+             'down': -44, },
+            {'name': 'Google PaLM',
+             'up': 55,
+             'down': -66, },
+            {'name': 'Google VertexAI',
+             'up': 77,
+             'down': -88, },
+            ]
 
 
 @cache

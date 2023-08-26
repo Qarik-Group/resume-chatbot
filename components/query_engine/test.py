@@ -23,7 +23,13 @@ logger.info('Initializing...')
 def test_queries(query_engine) -> None:
     """Test sample queries."""
     queries = [
-        'What is current job of Roman Kharkovski?',
+        'What are Roman Kharkovski skills?',
+        'What is the current job title of Steven Kim?',
+        'Does John Bishop have Java experience?',
+        'Compare and contrast skills of Atilla Guzel and Michael Kharkovski.',
+        'What is the current job title of Roman Kharkovski?',
+        'What was the job title of Roman Kharkovski prior to joining Qarik?',
+        'What are the three most recent job titles of Roman Kharkovski?',
         # 'Give me a list of all people who have provided their resumes.',
         # 'What is Roman Kharkovski\'s email?',
         # 'What are the main skills for Roman Kharkovski?',
