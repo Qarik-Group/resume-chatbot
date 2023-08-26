@@ -87,15 +87,15 @@ const ChartComponent = ({ data }) => {
     labels: names,
     datasets: [
       {
-        label: "Up Votes",
+        label: "Upvotes",
         data: upVotes,
-        backgroundColor: "rgba(75, 192, 192, 0.6)",
+        backgroundColor: "#39ff15", // You can customize this color
         borderWidth: 1,
       },
       {
-        label: "Down Votes",
+        label: "Downvotes",
         data: downVotes,
-        backgroundColor: "rgba(255, 99, 132, 0.6)",
+        backgroundColor: "#d83f3f", // You can customize this color
         borderWidth: 1,
       },
     ],
@@ -108,12 +108,13 @@ const ChartComponent = ({ data }) => {
         options={{
           responsive: true,
           scales: {
-            yAxes: [
-              {
-                type: "linear",
-                beginAtZero: true,
-              },
-            ],
+            y: {
+              beginAtZero: false,
+              stacked: true, // Enable this for stacking
+            },
+            x: {
+              stacked: true, // Enable this for stacking
+            },
           },
         }}
       />
@@ -345,17 +346,18 @@ function App() {
         <Box sx={{ width: "100%" }}>
           {currentTab === "Stats" && (
             <Box>
-                <Typography variant="h3">Voting results</Typography>
-                <Typography height={15}></Typography>
-                {llmVotingStats && (
-                  <div>
-                    <ChartComponent data={llmVotingStats} style={{ width: '1900px', height: '900px' }} />
-                  </div>
-                )}
-                {!llmVotingStats && (
-                  <Typography>You must vote on at least one answer in order to see voting results.</Typography>
-                )}
-              </Box>
+              <Typography variant="h3">Voting results</Typography>
+              <Typography height={15}></Typography>
+              {llmVotingStats && (
+                <div>
+                  <Typography>Aggregated user votes for the accuracy of responses.</Typography>
+                  <ChartComponent data={llmVotingStats} style={{ width: "1900px", height: "900px" }} />
+                </div>
+              )}
+              {!llmVotingStats && (
+                <Typography>You must vote on at least one answer in order to see voting results.</Typography>
+              )}
+            </Box>
           )}
         </Box>
         <Box sx={{ width: "100%" }}>{currentTab === "Help" && <Help />}</Box>

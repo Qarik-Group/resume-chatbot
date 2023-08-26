@@ -216,6 +216,7 @@ def ask_local(data: AskInput, x_goog_authenticated_user_email: Annotated[str | N
 @log_params
 def vote(data: VoteInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> list:
     """Ask a question to the local LLM model."""
+    # TODO - implement persistence for user votes into Firestore and return back the most recent voting results
     return [{'name': 'ChatGPT',
              'up': 11,
              'down': -22, },
