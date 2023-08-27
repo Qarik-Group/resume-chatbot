@@ -25,6 +25,7 @@
 }
 
 h3 {
+  color: #90caf9;
   font-size: 36px !important;
 }
 
@@ -49,12 +50,12 @@ a:visited {
 }
 
 .message.user {
-  background-color: #121212; /* A light blue color for user messages */
+  background-color: #333333; /* A light purple color for server messages */
   width: 100%;
 }
 
 .message.server {
-  background-color: #333333; /* A light purple color for server messages */
+  background-color: #121212;
 }
 
 .message.user .prefix {

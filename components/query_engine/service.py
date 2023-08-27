@@ -81,8 +81,11 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-_db = chat_dao.ChatDao()
-"""Data Access Object to abstract access to the database from the rest of the app."""
+_users_db = chat_dao.UserDao()
+"""Data Access Object to the database of users."""
+
+_vote_db = chat_dao.VoteDao()
+"""Data Access Object to the database of votes."""
 
 
 def get_user_id(user_email: str | None) -> str:
@@ -107,18 +110,18 @@ def run_query(question: Any, user_id: str, query_method: Any, llm_backend: str) 
     except Exception as e:
         logger.error('Error querying LLM: %s', e)
         try:
-            _db.save_question_answer(user_id=user_id,
-                                     question=str(question),
-                                     answer=f'Error querying LLM: {e}',
-                                     llm_backend=llm_backend)
+            _users_db.save_question_answer(user_id=user_id,
+                                           question=str(question),
+                                           answer=f'Error querying LLM: {e}',
+                                           llm_backend=llm_backend)
         except Exception:
             pass
         raise SystemError('Error querying LLM: %s' % e)
 
-    _db.save_question_answer(user_id=user_id,
-                             question=str(question),
-                             answer=str(answer),
-                             llm_backend=llm_backend)
+    _users_db.save_question_answer(user_id=user_id,
+                                   question=str(question),
+                                   answer=str(answer),
+                                   llm_backend=llm_backend)
     return answer
 
 
@@ -133,7 +136,6 @@ class VoteInput(BaseModel):
     question: str
     answer: str
     upvoted: bool
-    downvoted: bool
 
 
 @app.get('/people')
@@ -214,22 +216,26 @@ def ask_local(data: AskInput, x_goog_authenticated_user_email: Annotated[str | N
 
 @app.post('/vote')
 @log_params
-def vote(data: VoteInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> list:
-    """Ask a question to the local LLM model."""
-    # TODO - implement persistence for user votes into Firestore and return back the most recent voting results
-    return [{'name': 'ChatGPT',
-             'up': 11,
-             'down': -22, },
-            {'name': 'Google Enterprise Search',
-             'up': 33,
-             'down': -44, },
-            {'name': 'Google PaLM',
-             'up': 55,
-             'down': -66, },
-            {'name': 'Google VertexAI',
-             'up': 77,
-             'down': -88, },
-            ]
+def vote(data: VoteInput) -> list:
+    """Submit user vote for the provided response."""
+    _vote_db.submit_vote(llm=data.llm_backend,
+                         question=data.question,
+                         answer=data.answer,
+                         upvoted=data.upvoted)
+    return _vote_db.get_llm_totals()
+    # return [{'name': 'ChatGPT',
+    #          'up': 11,
+    #          'down': -22, },
+    #         {'name': 'Google Enterprise Search',
+    #          'up': 33,
+    #          'down': -44, },
+    #         {'name': 'Google PaLM',
+    #          'up': 55,
+    #          'down': -66, },
+    #         {'name': 'Google VertexAI',
+    #          'up': 77,
+    #          'down': -88, },
+    #         ]
 
 
 @cache

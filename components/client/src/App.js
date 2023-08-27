@@ -13,9 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License. */
 
 import React, { useState, useEffect } from "react";
-import { BarElement, BarController, Chart, CategoryScale, LinearScale } from "chart.js";
+import { defaults, BarElement, BarController, Chart, CategoryScale, LinearScale } from "chart.js";
 import { Bar } from "react-chartjs-2";
-
 import Alert from "@mui/material/Alert";
 import {
   Box,
@@ -76,6 +75,8 @@ let useGptLlm = true;
 let useVertexLlm = true;
 
 Chart.register(CategoryScale, LinearScale, BarElement, BarController);
+defaults.color = "white";
+defaults.font.size = 16;
 
 const ChartComponent = ({ data }) => {
   // Extracting data from the provided prop
@@ -89,7 +90,8 @@ const ChartComponent = ({ data }) => {
       {
         label: "Upvotes",
         data: upVotes,
-        backgroundColor: "#39ff15", // You can customize this color
+        // backgroundColor: "#39ff15", // You can customize this color
+        backgroundColor: "rgb(31,151,116)", // You can customize this color
         borderWidth: 1,
       },
       {
@@ -233,10 +235,16 @@ function App() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h4" noWrap component="div" color={"#39FF14"}>
+          <Typography variant="h4" nowrap component="div">
             {/* {currentTab} */}
-            Qarik Resume Chatbot
+            Resume Chatbot
           </Typography>
+          {/* Right alight the next text in the same row */}
+          <Typography sx={{ flexGrow: 1 }} />
+          <Typography color={"#39FF14"} fontWeight={"bold"}>
+            Qarik
+          </Typography>
+          <Typography>&nbsp; helps companies to modernize how they build and run cloud native software.</Typography>
         </Toolbar>
       </AppBar>
       {drawerOpen && (
@@ -343,15 +351,14 @@ function App() {
             </Box>
           )}
         </Box>
-        <Box sx={{ width: "80%", height: "80%" }}>
+        <Box sx={{ width: "100%" }}>
           {currentTab === "Stats" && (
             <Box>
-              <Typography variant="h3">Voting results</Typography>
+              <Typography variant="h3">LLM quality voting results from all users</Typography>
               <Typography height={15}></Typography>
               {llmVotingStats && (
-                <div>
-                  <Typography>Aggregated user votes for the accuracy of responses.</Typography>
-                  <ChartComponent data={llmVotingStats}/>
+                <div style={{ height: "70%", width: "70%" }}>
+                  <ChartComponent data={llmVotingStats} />
                 </div>
               )}
               {!llmVotingStats && (
@@ -496,13 +503,12 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Credentials": true,
         },
-        // body: JSON.stringify(message),
+        // No need to submit downvoted because it is always the opposite of upvoted
         body: JSON.stringify({
           llm_backend: message.sender,
           question: question,
           answer: message.text,
           upvoted: message.upvoted,
-          downvoted: message.downvoted,
         }),
       });
 
@@ -553,11 +559,11 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
           display: "flex",
           flexDirection: "column",
           alignItems: "flex-start",
-          border: "1px solid #555",
-          borderRadius: "4px",
-          padding: "16px",
+          // border: "1px solid #555",
+          // borderRadius: "4px",
+          // padding: "16px",
+          // backgroundColor: "#333",
           minHeight: "400px",
-          backgroundColor: "#333",
           marginBottom: "16px",
           overflowY: "auto",
         }}
@@ -693,8 +699,8 @@ function Help() {
       >
         <Typography variant="h3">Help and system information</Typography>
         <Typography height={15}></Typography>
-        <Typography>Client version: 0.1.18</Typography>
-        <Typography>Software update: August 25, 2023</Typography>
+        <Typography>Client version: 0.20</Typography>
+        <Typography>Software update: August 27, 2023</Typography>
         <Typography>Author: Roman Kharkovski (kharkovski@gmail.com)</Typography>
         <Typography>
           Source code: <a href="https://github.com/Qarik-Group/resume-chatbot">GitHub repo</a>
@@ -802,7 +808,7 @@ function Resumes({ backendUrl, idToken }) {
         overflowY: "auto",
       }}
     >
-      <Typography variant="h4">List of resumes available for queries</Typography>
+      <Typography variant="h3">List of resumes</Typography>
       {isLoading && (
         <Box
           sx={{
