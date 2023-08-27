@@ -24,6 +24,14 @@ log "Ask a question about a person..."
 #   -d "{\"question\":\"What is email of Steven Kim?\"}" \
 #   "${CHAT_SVC_DEV_URL}/ask_vertex"
 
+# gcurl -i -X POST \
+#   -d "{\"question\":\"Where does Roman Kharkovski live?\"}" \
+#   "${CHAT_SVC_DEV_URL}/ask_gpt"
+
 gcurl -i -X POST \
-  -d "{\"question\":\"Where does Roman Kharkovski live?\"}" \
-  "${CHAT_SVC_DEV_URL}/ask_gpt"
+  -d "{\"llm_backend\":\"LLM PaLM Test 111\", \"question\":\"Who and where?\",\"answer\":\"I do not know\",\"upvoted\":false}" \
+  "${CHAT_SVC_DEV_URL}/vote"
+
+# gcurl -i -X POST \
+#   -d "{\"llm_backend\":\"LLM PaLM Test\", \"question\":\"Who and where?\",\"answer\":\"I do not know\",\"upvoted\":true}" \
+#   "${CHAT_SVC_DEV_URL}/vote"
