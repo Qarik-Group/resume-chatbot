@@ -14,9 +14,10 @@ limitations under the License. -->
 
 This project demonstrates the use of the following LLMs for the purpose of Q&A over PDF files with resumes:
 
-- Open AI ChatGPT API
-- Google PaLM
-- Google Gen AI Enterprise Search
+- Open AI ChatGPT (using LlamaIndex)
+- Google PaLM (using LlamaIndex)
+- Google Gen AI Enterprise Search with summarization (using direct API)
+- Google Vertex AI (using LangChain, Google embeddings and bison model, Chroma as vector DB)
 - Meta Llama 2 local (work in progress)
 
 This project allows users to interact with resumes stored in PDF files and ask questions about a single person or a
@@ -35,7 +36,7 @@ Qarik employees can use an IAP secured application loaded with resumes of Qarik 
 
 Here is an example of the UI running in a browser:
 
-![Web UI screenshot with sample Q&A](./doc/images/chat-ui-screenshot.png)
+![Web UI demo](./doc/images/demo.gif)
 
 If you found a bug, or have any ideas on how to improve this tool, please
 [open an issue](https://github.com/Qarik-Group/resume-chatbot/issues), or better yet - submit a pull request.
