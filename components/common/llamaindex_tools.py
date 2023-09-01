@@ -12,26 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime
 import glob
 import os
 import threading
 from pathlib import Path
 from typing import Any, List
 
-from common import constants, solution
+from common import admin_dao, constants, gcs_tools, solution
+from common.cache import cache
 from common.log import Logger, log, log_params
 from langchain.llms.openai import OpenAIChat
-import google.generativeai as palm
-from llama_index.llms import PaLM
-from llama_index import (Document, GPTSimpleKeywordTableIndex, GPTVectorStoreIndex, ServiceContext,
-                         SimpleDirectoryReader, StorageContext, load_index_from_storage, LLMPredictor)
+from llama_index import (Document, GPTSimpleKeywordTableIndex, GPTVectorStoreIndex, LLMPredictor, ServiceContext,
+                         SimpleDirectoryReader, StorageContext, load_index_from_storage)
 from llama_index.indices.composability import ComposableGraph
 from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.indices.query.query_transform.base import DecomposeQueryTransform
-from llama_index.query_engine.router_query_engine import RouterQueryEngine
+# import google.generativeai as palm
+# from llama_index.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.query_engine.transform_query_engine import TransformQueryEngine
-from llama_index.selectors.llm_selectors import LLMSingleSelector
-from llama_index.tools.query_engine import QueryEngineTool
+
+# from llama_index.selectors.llm_selectors import LLMSingleSelector
+# from llama_index.tools.query_engine import QueryEngineTool
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
@@ -39,21 +41,28 @@ logger.info('Initializing...')
 DATA_LOAD_LOCK = threading.Lock()
 """Block many concurrent data loads at once."""
 
+LLAMA_FILE_LOCK = threading.Lock()
+"""Lock to prevent concurrent updates of the same index - needed in case we have more than one request processing."""
+
+INDEX_BUCKET: str = solution.getenv('EMBEDDINGS_BUCKET_NAME')
+"""Location to download llama-index embeddings from."""
+
+LAST_LOCAL_INDEX_UPDATE: datetime | None = None
+"""Keep track of the most recent local index update to avoid unnecessary refreshes."""
+
+if solution.LOCAL_DEVELOPMENT_MODE:
+    LLAMA_INDEX_DIR: str = 'dev/tmp/llamaindex-embeddings'
+else:
+    LLAMA_INDEX_DIR = 'tmp/llamaindex-embeddings'
+
+LOCAL_DEV_DATA_DIR: str = 'dev/tmp'
+"""Location of the local data directory for development on local machine."""
+
 
 @log
-def get_llm(provider: constants.LlmProvider) -> LLMPredictor:
+def _get_llm(provider: constants.LlmProvider) -> LLMPredictor:
     """Return LLM predictor."""
-    if provider == constants.LlmProvider.GOOGLE_PALM:
-        # https://github.com/google/generative-ai-docs/blob/main/demos/palm/web/list-it/README.md
-        llm = LLMPredictor(llm=PaLM(api_key=solution.getenv('GOOGLE_PALM_API_KEY')))
-        # -------------------- DEBUG START
-        # from llama_index.llms.palm import PaLM
-        # model = PaLM(api_key=solution.getenv('GOOGLE_PALM_API_KEY'))
-        # result = model.complete('Who is George Washington?')
-        # print(result)
-        # exit(0)
-        # -------------------- DEBUG END
-    elif provider == constants.LlmProvider.OPEN_AI:
+    if provider == constants.LlmProvider.OPEN_AI:
         llm = LLMPredictor(llm=OpenAIChat(temperature=constants.TEMPERATURE, model_name=constants.GPT_MODEL))
     else:
         raise ValueError(f'Unknown LLM provider: {provider}')
@@ -61,13 +70,13 @@ def get_llm(provider: constants.LlmProvider) -> LLMPredictor:
 
 
 @log_params
-def load_resumes(resume_dir: str | None, index_dir: str) -> dict[str, List[Document]]:
+def load_resumes(resume_dir: str | None) -> dict[str, List[Document]]:
     """Initialize list of resumes from index storage or from the directory with PDF source files."""
     resumes: dict[str, List[Document]] = {}
     if resume_dir is None:
         resume_dir = ''
     resume_path = Path(resume_dir)
-    index_path = Path(index_dir)
+    index_path = Path(LLAMA_INDEX_DIR)
     global DATA_LOAD_LOCK
     with DATA_LOAD_LOCK:
         if index_path.exists():
@@ -106,7 +115,7 @@ def load_resumes(resume_dir: str | None, index_dir: str) -> dict[str, List[Docum
 
 
 @log
-def load_resume_indices(resumes: dict[str, List[Document]],
+def _load_resume_indices(resumes: dict[str, List[Document]],
                         service_context: ServiceContext, embeddings_dir: str) -> dict[str, GPTVectorStoreIndex]:
     """Load or create index storage contexts for each person in the resumes list."""
     vector_indices = {}
@@ -156,27 +165,29 @@ def _load_resume_index_summary(resumes: dict[str, Any]) -> dict[str, str]:
 
 
 @log_params
-def generate_embeddings(resume_dir: str, index_dir: str, provider: constants.LlmProvider) -> None:
+def generate_embeddings(resume_dir: str, provider: constants.LlmProvider) -> None:
     """Generate embeddings from PDF resumes."""
-    resumes = load_resumes(resume_dir=resume_dir, index_dir=index_dir)
+    resumes = load_resumes(resume_dir=resume_dir)
     if not resumes:
         return None
-    predictor = get_llm(provider=provider)
+    predictor = _get_llm(provider=provider)
     context = ServiceContext.from_defaults(llm_predictor=predictor, chunk_size_limit=constants.CHUNK_SIZE)
-    load_resume_indices(resumes=resumes, service_context=context, embeddings_dir=index_dir)
+    _load_resume_indices(resumes=resumes, service_context=context, embeddings_dir=LLAMA_INDEX_DIR)
 
 
 @log_params
-def get_resume_query_engine(index_dir: str, provider: constants.LlmProvider, resume_dir: str | None = None) -> BaseQueryEngine | None:
+def _get_resume_query_engine(provider: constants.LlmProvider, resume_dir: str | None = None) -> BaseQueryEngine | None:
     """Load the index from disk, or build it if it doesn't exist."""
-    llm = get_llm(provider=provider)
+    llm = _get_llm(provider=provider)
     service_context = ServiceContext.from_defaults(llm_predictor=llm, chunk_size_limit=constants.CHUNK_SIZE)
 
-    resumes: dict[str, List[Document]] = load_resumes(resume_dir=resume_dir, index_dir=index_dir)
+    resumes: dict[str, List[Document]] = load_resumes(resume_dir=resume_dir)
     logger.debug('-------------------------- resumes: %s', resumes.keys())
     if not resumes:
         return None
-    vector_indices = load_resume_indices(resumes, service_context, embeddings_dir=index_dir)
+    # vector_indices = load_resume_indices(resumes, service_context)
+    vector_indices = _load_resume_indices(resumes=resumes, service_context=service_context,
+                                         embeddings_dir=LLAMA_INDEX_DIR)
     index_summaries = _load_resume_index_summary(resumes)
 
     graph = ComposableGraph.from_indices(root_index_cls=GPTSimpleKeywordTableIndex,
@@ -240,3 +251,43 @@ def get_resume_query_engine(index_dir: str, provider: constants.LlmProvider, res
     #     service_context=service_context), query_engine_tools=query_engine_tools)
 
     # return router_query_engine
+
+
+@cache
+@log
+def _refresh_llama_index() -> None:
+    """Refresh the index of resumes from the database using Llama-Index."""
+    global LAST_LOCAL_INDEX_UPDATE
+
+    if solution.LOCAL_DEVELOPMENT_MODE:
+        logger.info('Running in local development mode')
+        index_path = Path(LLAMA_INDEX_DIR)
+        if not index_path.exists():
+            # TODO - need to generate proper embeddings for each provider, not hard coded
+            generate_embeddings(resume_dir=LOCAL_DEV_DATA_DIR, provider=constants.LlmProvider.OPEN_AI)
+        return
+
+    global LLAMA_FILE_LOCK
+    last_resume_refresh = admin_dao.AdminDAO().get_resumes_timestamp()
+    if LAST_LOCAL_INDEX_UPDATE is None or LAST_LOCAL_INDEX_UPDATE < last_resume_refresh:
+        logger.info('Refreshing local index of resumes...')
+        # Prevent concurrent updates of the same index - needed in case we have more than one request processing
+        with LLAMA_FILE_LOCK:
+            # Check for condition again because the index may have been updated while we were waiting for the lock
+            if LAST_LOCAL_INDEX_UPDATE is None or LAST_LOCAL_INDEX_UPDATE < last_resume_refresh:
+                gcs_tools.download(bucket_name=INDEX_BUCKET, local_dir=LLAMA_INDEX_DIR)
+        return last_resume_refresh
+
+    logger.info('Skipping refresh of resumes index because no changes in source resumes were detected.')
+    LAST_LOCAL_INDEX_UPDATE = last_resume_refresh
+
+
+@log
+def query(question: str) -> str:
+    """Run LLM query for CHatGPT."""
+    _refresh_llama_index()
+    query_engine = _get_resume_query_engine(provider=constants.LlmProvider.OPEN_AI)
+    if query_engine is None:
+        raise SystemError('No resumes found in the database. Please upload resumes.')
+
+    return str(query_engine.query(question))

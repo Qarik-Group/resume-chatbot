@@ -15,6 +15,9 @@ FROM python:3.11.4
 # It appears that Chromadb can not be installed in a slim version of python, at least not without bunch of tweaks
 # FROM python:3.11.4-slim
 
+RUN apt-get update \
+    && apt-get -y install tesseract-ocr libtesseract-dev poppler-utils libgeos-dev
+
 ENV COMPONENT_NAME="query_engine"
 ENV RUN_FILE="service"
 ENV APP_USER="user1"

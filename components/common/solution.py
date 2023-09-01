@@ -41,10 +41,10 @@ def getenv(key: str, default: str | None = None) -> str:
 #########################################################
 # Project specific settings
 #########################################################
-SW_VERSION: str = getenv('SW_VERSION', '0.1.19')
+SW_VERSION: str = getenv('SW_VERSION', '0.1.20')
 """Version of this project."""
 
-SW_DATE: str = getenv('SW_DATE', 'August 27, 2023')
+SW_DATE: str = getenv('SW_DATE', 'August 31, 2023')
 """Release date of this project."""
 
 RESOURCE_PREFIX: str = getenv('RESOURCE_PREFIX', 'skb')
@@ -52,6 +52,12 @@ RESOURCE_PREFIX: str = getenv('RESOURCE_PREFIX', 'skb')
 
 PROJECT_ID: str = getenv('PROJECT_ID')
 """Name of the GCP project where this code runs."""
+
+REGION: str = getenv('REGION', 'us-central1')
+"""Name of the GCP project where this code runs."""
+
+LOCAL_DEVELOPMENT_MODE: bool = bool(getenv('LOCAL_DEVELOPMENT_MODE', False))
+"""Flag to indicate if we are running in local development mode."""
 
 license_info = {
     'name': 'Apache 2.0',

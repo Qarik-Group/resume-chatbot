@@ -26,13 +26,11 @@ SERVING_CONFIG_ID = 'default_config'
 
 
 @log_params
-def query(search_query: str) -> str | None:
+def query(question: str) -> str | None:
     """Query the Google Discovery Engine with summarization enabled."""
-    # Create a client
     client = discoveryengine.SearchServiceClient()
 
-    # The full resource name of the search engine serving config
-    # e.g. projects/{project_id}/locations/{location}
+    # The full resource name of the search engine serving config: e.g. projects/{project_id}/locations/{location}
     serving_config = client.serving_config_path(
         project=solution.PROJECT_ID,
         location=LOCATION,
@@ -42,11 +40,10 @@ def query(search_query: str) -> str | None:
 
     request = discoveryengine.SearchRequest(
         serving_config=serving_config,
-        query=search_query,
+        query=question,
     )
     response = client.search(request)
     # https://cloud.google.com/generative-ai-app-builder/docs/reference/rest/v1/SearchResponse
-    # print(response)
 
     for a in response.results[0].document.derived_struct_data['extractive_answers']:
         for b in a.items():

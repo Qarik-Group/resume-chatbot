@@ -20,17 +20,26 @@ source "../../../setenv.sh"
 # gcurl -i "${CHAT_SVC_DEV_URL}/people"
 
 log "Ask a question about a person..."
+
 # gcurl -i -X POST \
 #   -d "{\"question\":\"What is email of Steven Kim?\"}" \
-#   "${CHAT_SVC_DEV_URL}/ask_vertex"
+#   "${CHAT_SVC_DEV_URL}/ask_ent_search"
 
 # gcurl -i -X POST \
-#   -d "{\"question\":\"Where does Roman Kharkovski live?\"}" \
+#   -d "{\"question\":\"What is email of Steven Kim?\"}" \
 #   "${CHAT_SVC_DEV_URL}/ask_gpt"
 
-gcurl -i -X POST \
-  -d "{\"llm_backend\":\"LLM PaLM Test 111\", \"question\":\"Who and where?\",\"answer\":\"I do not know\",\"upvoted\":false}" \
-  "${CHAT_SVC_DEV_URL}/vote"
+# gcurl -i -X POST \
+#   -d "{\"question\":\"What is email of Steven Kim?\"}" \
+#   "${CHAT_SVC_DEV_URL}/ask_palm_chroma_langchain"
+
+# gcurl -i -X POST \
+#   -d "{\"question\":\"What is email of Steven Kim?\"}" \
+#   "${CHAT_SVC_DEV_URL}/ask_vertexai"
+
+# gcurl -i -X POST \
+#   -d "{\"llm_backend\":\"LLM PaLM Test 111\", \"question\":\"Who and where?\",\"answer\":\"I do not know\",\"upvoted\":false}" \
+#   "${CHAT_SVC_DEV_URL}/vote"
 
 # gcurl -i -X POST \
 #   -d "{\"llm_backend\":\"LLM PaLM Test\", \"question\":\"Who and where?\",\"answer\":\"I do not know\",\"upvoted\":true}" \
