@@ -564,8 +564,11 @@ define_chat_svc_sa() {
   log "Granting GCS reader role to [${CHAT_SVC_EMAIL}] on bucket [${EMBEDDINGS_BUCKET_NAME}]..."
   gsutil iam ch "serviceAccount:${CHAT_SVC_EMAIL}:roles/storage.objectViewer" "gs://${EMBEDDINGS_BUCKET_NAME}"
 
-  log "Granting GCS reader role to [${CHAT_SVC_EMAIL}] on bucket [${ME_EMBEDDING_BUCKET}]..."
+  log "Granting GCS object reader role to [${CHAT_SVC_EMAIL}] on bucket [${ME_EMBEDDING_BUCKET}]..."
   gsutil iam ch "serviceAccount:${CHAT_SVC_EMAIL}:roles/storage.objectViewer" "gs://${ME_EMBEDDING_BUCKET}"
+
+  log "Granting GCS bucket reader role to [${CHAT_SVC_EMAIL}] on bucket [${ME_EMBEDDING_BUCKET}]..."
+  gsutil iam ch "serviceAccount:${CHAT_SVC_EMAIL}:roles/storage.legacyBucketReader" "gs://${ME_EMBEDDING_BUCKET}"
 
   log "Granting GCS reader role to [${CHAT_SVC_EMAIL}] on bucket [${RESUME_BUCKET_NAME}]..."
   gsutil iam ch "serviceAccount:${CHAT_SVC_EMAIL}:roles/storage.objectViewer" "gs://${RESUME_BUCKET_NAME}"

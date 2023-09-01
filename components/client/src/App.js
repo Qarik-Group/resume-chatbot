@@ -62,10 +62,11 @@ const iapBackend = "https://34.95.89.166.nip.io";
 const defaultBackendUrl = iapBackend;
 
 // Prefix to add to the prompt before sending it to LLM engine
-const defaultPromptPrefix = `The provided context below is separated by <> and contains information from resumes of employees of a company. Strictly Use ONLY the following pieces of context to answer the question at the end. Think step-by-step and then answer. Do not try to make up an answer:
- - If the answer to the question cannot be determined from the context alone, say "I cannot determine the answer to that."
- - If the context is empty, just say "I do not know the answer to that."
- <>`;
+const defaultPromptPrefix = "";
+// const defaultPromptPrefix = `The provided context below is separated by <> and contains information from resumes of employees of a company. Strictly Use ONLY the following pieces of context to answer the question at the end. Think step-by-step and then answer. Do not try to make up an answer:
+//  - If the answer to the question cannot be determined from the context alone, say "I cannot determine the answer to that."
+//  - If the context is empty, just say "I do not know the answer to that."
+//  <>`;
 
 // User name to display in the chat window
 let userName = null;
@@ -332,27 +333,11 @@ function App() {
                 <Typography height={20}></Typography>
                 <Typography>
                   <Checkbox
-                    checked={useGoog}
-                    onChange={(e) => setGoogLlm(e.target.checked)}
-                    inputProps={{ "aria-label": "controlled" }}
-                  />
-                  use Google Enterprise Search with summarization (API hosted by Google Gen AI in this GCP project)
-                </Typography>
-                <Typography>
-                  <Checkbox
-                    checked={useGpt}
-                    onChange={(e) => setGptLlm(e.target.checked)}
-                    inputProps={{ "aria-label": "controlled" }}
-                  />
-                  use Chat GPT 4.0 via Llama-Index (public API hosted by OpenAI)
-                </Typography>
-                <Typography>
-                  <Checkbox
                     checked={usePalm}
                     onChange={(e) => setPalmLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Google PaLM via Llama-Index (public API hosted by Google)
+                  use Google PaLM 2 with scalable VertexAI Vector Search, Embeddings API via LangChain
                 </Typography>
                 <Typography>
                   <Checkbox
@@ -360,7 +345,23 @@ function App() {
                     onChange={(e) => setVertexLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Google Vertex AI Bison LLM via Langchain (hosted in this project)
+                  use Google PaLM 2 with local ChromaDB via LangChain
+                </Typography>
+                <Typography>
+                  <Checkbox
+                    checked={useGoog}
+                    onChange={(e) => setGoogLlm(e.target.checked)}
+                    inputProps={{ "aria-label": "controlled" }}
+                  />
+                  use Google Enterprise Search with summarization
+                </Typography>
+                <Typography>
+                  <Checkbox
+                    checked={useGpt}
+                    onChange={(e) => setGptLlm(e.target.checked)}
+                    inputProps={{ "aria-label": "controlled" }}
+                  />
+                  use Chat GPT 3.5 via Llama-Index (public API hosted by OpenAI)
                 </Typography>
                 <Typography height={20}></Typography>
                 <TextField
@@ -371,7 +372,7 @@ function App() {
                 />
                 <Typography fontSize={11} color={"grey"}>
                   Feel free to play with the REST API directly by using the URL above, or change the URL to point to
-                  your development instance.
+                  your development instance, for example: http://127.0.0.1:5002.
                 </Typography>
               </Box>
             </Box>
