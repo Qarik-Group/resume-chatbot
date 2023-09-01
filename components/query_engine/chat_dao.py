@@ -18,8 +18,16 @@ from typing import Any
 from common import firestore_tools, solution
 from common.log import Logger, log
 from google.cloud import firestore  # type: ignore
+from pydantic import BaseModel, Field
 
 logger = Logger(__name__).get_logger()
+
+
+class VoteStatistic(BaseModel):
+    """Input parameters for the vote endpoint."""
+    name: str = Field(description='Name of the LLM backend', example='ChatGPT', min_length=1, max_length=100)
+    up: int = Field(description='Number of upvotes for this LLM backend', example=11, ge=0)
+    down: int = Field(description='Number of downvotes for this LLM backend', example=-22, le=0)
 
 
 class BaseDao:
@@ -87,12 +95,12 @@ class VoteDao(BaseDao):
 
     @log
     # Return vote counts for each llm
-    def get_llm_totals(self) -> list[dict[str, Any]]:
+    def get_llm_totals(self) -> list[VoteStatistic]:
         """Return list of all votes in the database."""
-        votes: list[dict[str, Any]] = []
+        votes: list[VoteStatistic] = []
         for doc in self._collection.stream():
             vote: dict[str, Any] = doc.to_dict()
-            votes.append({'name': vote['llm'], 'up': vote['up'], 'down': vote['down']})
+            votes.append(VoteStatistic(name=vote['llm'], up=vote['up'], down=vote['down']))
         return votes
 
 

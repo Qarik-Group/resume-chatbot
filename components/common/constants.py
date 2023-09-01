@@ -15,9 +15,6 @@
 
 from datetime import timezone
 from enum import Enum
-# from langchain.chains.prompt_selector import ConditionalPromptSelector, is_chat_model
-# from langchain.prompts.chat import AIMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
-# from llama_index.prompts.prompts import QuestionAnswerPrompt, RefinePrompt
 
 #########################################################
 # Definitions of frequently used units of measurement
@@ -52,9 +49,15 @@ TIMEZONE: timezone = timezone.utc
 #########################################################
 # LLM specific settings
 #########################################################
+
+
 class LlmProvider(Enum):
-    GOOGLE_PALM = 1
-    OPEN_AI = 2
+    GOOG_ENT_SEARCH = 'GOOG_ENT_SEARCH'
+    GOOG_PALM = 'GOOG_PALM'
+    GOOG_VERTEX = 'GOOG_VERTEX'
+    OPEN_AI = 'OPEN_AI'
+
+
 """Which LLM provider to use."""
 
 # GPT_MODEL = 'text-davinci-003'
@@ -62,7 +65,7 @@ GPT_MODEL = 'gpt-3.5-turbo'
 # GPT_MODEL: str = 'gpt-4'
 """Open AI model name to be used."""
 
-GOOGLE_PALM_MODEL_LOCAL: str = 'text-bison@001'
+GOOGLE_PALM_MODEL: str = 'text-bison@001'
 
 MAX_KEYWORDS_PER_CHUNK: int = 100
 """Maximum number of keywords per chunk for Complex Query Graph."""

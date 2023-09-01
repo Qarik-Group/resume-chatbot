@@ -15,10 +15,9 @@ limitations under the License. -->
 This project demonstrates the use of the following LLMs for the purpose of Q&A over PDF files with resumes:
 
 - Open AI ChatGPT (using LlamaIndex)
-- Google PaLM (using LlamaIndex)
+- Google PaLM2 (using LangChain)
 - Google Gen AI Enterprise Search with summarization (using direct API)
 - Google Vertex AI (using LangChain, Google embeddings and bison model, Chroma as vector DB)
-- Meta Llama 2 local (work in progress)
 
 This project allows users to interact with resumes stored in PDF files and ask questions about a single person or a
 group of people in plain English. Example questions:
@@ -98,7 +97,7 @@ In order to build and deploy this project you need the following:
   if you want to enable IAP in front of your Cloud Run instances. However be aware that the initial setup will take more
   than an hour because it takes that long to propagate the SSL certificate settings.
 
-- Add any number of PDF files with resumes to the [components/data](components/data/) folder. Files shall be named using
+- Add any number of PDF files with resumes to the [data](data/) folder. Files shall be named using
   'Firstname Lastname.pdf' format with space separating first and last name. Optionally you can append 'Resume' after
   last name. For example: 'Roman Kharkovski Resume.pdf'.
 
@@ -112,6 +111,14 @@ In order to build and deploy this project you need the following:
 ## Test query engine locally
 
 The experimentation with the queries can be done on a local machine:
+
+- Create new virtual environment (if VSCode prompts you to switch to this new virtual environment, accept it). You may
+    decide to have a separate Virtual Environment for each service, or have one common for all services:
+
+    ```bash
+    cd "${PROJECT_HOME}"
+    python3 -m venv .venv
+    ```
 
 - Activate the Python virtual environment in your terminal (only do it once in a terminal session):
 

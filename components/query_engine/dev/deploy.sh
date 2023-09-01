@@ -30,6 +30,7 @@ deploy() {
     --set-env-vars "EMBEDDINGS_BUCKET_NAME=${EMBEDDINGS_BUCKET_NAME}"
     --set-env-vars "RESUME_BUCKET_NAME=${RESUME_BUCKET_NAME}"
     --set-env-vars "PROJECT_ID=${PROJECT_ID}"
+    --set-env-vars "REGION=${REGION}"
     --set-env-vars "LOG_LEVEL=DEBUG"
     --allow-unauthenticated
   )
@@ -39,7 +40,7 @@ deploy() {
   # --vpc-connector "projects/${PROJECT_ID}/locations/${REGION}/connectors/${VPC_CONNECTOR_NAME}" \
 
   if [[ "${ENABLE_IAP}" == "true" ]]; then
-    ARGS+=(--min-instances 0)
+    ARGS+=(--min-instances 1)
     ARGS+=(--ingress internal-and-cloud-load-balancing)
   else
     ARGS+=(--ingress all)

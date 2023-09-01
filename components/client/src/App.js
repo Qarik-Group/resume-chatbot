@@ -61,6 +61,12 @@ const iapBackend = "https://34.95.89.166.nip.io";
 // Which backend URL to use as the default value
 const defaultBackendUrl = iapBackend;
 
+// Prefix to add to the prompt before sending it to LLM engine
+const defaultPromptPrefix = `The provided context below is separated by <> and contains information from resumes of employees of a company. Strictly Use ONLY the following pieces of context to answer the question at the end. Think step-by-step and then answer. Do not try to make up an answer:
+ - If the answer to the question cannot be determined from the context alone, say "I cannot determine the answer to that."
+ - If the context is empty, just say "I do not know the answer to that."
+ <>`;
+
 // User name to display in the chat window
 let userName = null;
 const fakeIdToken = "fakeIdToken";
@@ -129,6 +135,7 @@ function App() {
   const [currentTab, setCurrentTab] = useState("Chat");
   const [messages, setMessages] = useState([]);
   const [backendUrl, setBackendUrl] = useState(defaultBackendUrl);
+  const [promptPrefix, setPromptPrefix] = useState(defaultPromptPrefix);
   const [idToken, setIdToken] = useState(null);
   const [user, setUser] = useState([]);
 
@@ -199,6 +206,10 @@ function App() {
     if (idToken === fakeIdToken) {
       setIdToken(null);
     }
+  };
+
+  const handlePromptPrefixChange = (event) => {
+    setPromptPrefix(event.target.value);
   };
 
   function addMessage(role, sender, text) {
@@ -283,7 +294,13 @@ function App() {
             }}
           >
             {currentTab === "Chat" && (
-              <Chat messages={messages} addMessage={addMessage} backendUrl={backendUrl} idToken={idToken} />
+              <Chat
+                messages={messages}
+                addMessage={addMessage}
+                backendUrl={backendUrl}
+                idToken={idToken}
+                promptPrefix={promptPrefix}
+              />
             )}
           </Box>
         )}
@@ -303,6 +320,16 @@ function App() {
               >
                 <Typography variant="h3">Config</Typography>
                 <Typography height={15}></Typography>
+                <TextField
+                  label="LLM prompt prefix"
+                  value={promptPrefix}
+                  onChange={handlePromptPrefixChange}
+                  fullWidth
+                  multiline={true}
+                  rows={8}
+                  autoFocus
+                />
+                <Typography height={20}></Typography>
                 <Typography>
                   <Checkbox
                     checked={useGoog}
@@ -341,7 +368,6 @@ function App() {
                   value={backendUrl}
                   onChange={handleBackendUrlChange}
                   fullWidth
-                  autoFocus
                 />
                 <Typography fontSize={11} color={"grey"}>
                   Feel free to play with the REST API directly by using the URL above, or change the URL to point to
@@ -378,7 +404,7 @@ function App() {
   );
 }
 
-function Chat({ messages, addMessage, backendUrl, idToken }) {
+function Chat({ messages, addMessage, backendUrl, idToken, promptPrefix }) {
   const [question, setQuestion] = useState("");
 
   // Loading indicators for various LLM engines
@@ -394,10 +420,10 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
   const [vertexErrorMessage, setVertexErrorMessage] = useState("");
 
   // Prefixes for the answers from various LLM engines
-  const answerPrefixGpt = "Chat GPT";
-  const answerPrefixPalm = "Google PaLM";
-  const answerPrefixGoog = "Google GenAI";
-  const answerPrefixVertex = "Google VertexAI Bison";
+  const llmNameGpt = "Chat GPT";
+  const llmNamePalm = "Google PaLM";
+  const llmNameGoog = "Google GenAI";
+  const llmNameVertex = "Google VertexAI Bison";
 
   // Which LLM engines to use
 
@@ -405,7 +431,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
     setQuestion(event.target.value);
   };
 
-  const callBackendLlm = async (event, url, errorHandler, answerPrefix, isLoading) => {
+  const callBackendLlm = async (event, url, question, promptPrefix, errorHandler, llmName, isLoading) => {
     event.preventDefault();
     try {
       errorHandler("");
@@ -420,7 +446,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Credentials": true,
         },
-        body: JSON.stringify({ question: question }),
+        body: JSON.stringify({ question: question, prompt_prefix: promptPrefix }),
       });
 
       isLoading(false);
@@ -428,7 +454,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         const data = await response.json();
         const answer = data.answer;
         // Add the server's response to the chat history
-        addMessage("server", answerPrefix, answer);
+        addMessage("server", llmName, answer);
       } else {
         const contentType = response.headers.get("Content-Type");
         let error;
@@ -451,16 +477,48 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
     event.preventDefault();
     addMessage("user", userName, question);
     if (useGptLlm) {
-      callBackendLlm(event, `${backendUrl}/ask_gpt`, setGptErrorMessage, answerPrefixGpt, setIsGptLoading);
+      callBackendLlm(
+        event,
+        `${backendUrl}/ask_gpt`,
+        question,
+        promptPrefix,
+        setGptErrorMessage,
+        llmNameGpt,
+        setIsGptLoading
+      );
     }
     if (usePalmLlm) {
-      callBackendLlm(event, `${backendUrl}/ask_palm`, setPalmErrorMessage, answerPrefixPalm, setIsPalmLoading);
+      callBackendLlm(
+        event,
+        `${backendUrl}/ask_vertexai`,
+        question,
+        promptPrefix,
+        setPalmErrorMessage,
+        llmNamePalm,
+        setIsPalmLoading
+      );
     }
     if (useVertexLlm) {
-      callBackendLlm(event, `${backendUrl}/ask_vertex`, setVertexErrorMessage, answerPrefixVertex, setIsVertexLoading);
+      callBackendLlm(
+        event,
+        `${backendUrl}/ask_palm_chroma_langchain`,
+        question,
+        promptPrefix,
+        setVertexErrorMessage,
+        llmNameVertex,
+        setIsVertexLoading
+      );
     }
     if (useGoogLlm) {
-      callBackendLlm(event, `${backendUrl}/ask_google`, setGoogErrorMessage, answerPrefixGoog, setIsGoogLoading);
+      callBackendLlm(
+        event,
+        `${backendUrl}/ask_ent_search`,
+        question,
+        promptPrefix,
+        setGoogErrorMessage,
+        llmNameGoog,
+        setIsGoogLoading
+      );
     }
     // Reset the question field to be empty - or comment this out to leave it with the previous question
     // setQuestion("");
@@ -490,8 +548,6 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
     while (user_index > 0 && messages[user_index].role !== "user") {
       user_index--;
     }
-    const question = messages[user_index].text;
-    // const question = messages[index].text;
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -506,7 +562,7 @@ function Chat({ messages, addMessage, backendUrl, idToken }) {
         // No need to submit downvoted because it is always the opposite of upvoted
         body: JSON.stringify({
           llm_backend: message.sender,
-          question: question,
+          question: promptPrefix + " " + messages[user_index].text,
           answer: message.text,
           upvoted: message.upvoted,
         }),

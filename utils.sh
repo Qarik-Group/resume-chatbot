@@ -196,6 +196,21 @@ get_svc_url() {
 }
 
 #############################################
+# Prepare this dev machine for local development
+#############################################
+setup_local_os() {
+  log "Installing dependencies required by Unstructured PDF loader..."
+
+  # Ubuntu version
+  # sudo apt -y -qq install tesseract-ocr libtesseract-dev
+  # sudo apt-get -y -qq install poppler-utils
+
+  # MacOS version
+  brew install tesseract
+  brew install poppler
+}
+
+#############################################
 # Install Firebase local emulator
 #############################################
 install_firestore_emulator() {
@@ -549,6 +564,9 @@ define_chat_svc_sa() {
   log "Granting GCS reader role to [${CHAT_SVC_EMAIL}] on bucket [${EMBEDDINGS_BUCKET_NAME}]..."
   gsutil iam ch "serviceAccount:${CHAT_SVC_EMAIL}:roles/storage.objectViewer" "gs://${EMBEDDINGS_BUCKET_NAME}"
 
+  log "Granting GCS reader role to [${CHAT_SVC_EMAIL}] on bucket [${ME_EMBEDDING_BUCKET}]..."
+  gsutil iam ch "serviceAccount:${CHAT_SVC_EMAIL}:roles/storage.objectViewer" "gs://${ME_EMBEDDING_BUCKET}"
+
   log "Granting GCS reader role to [${CHAT_SVC_EMAIL}] on bucket [${RESUME_BUCKET_NAME}]..."
   gsutil iam ch "serviceAccount:${CHAT_SVC_EMAIL}:roles/storage.objectViewer" "gs://${RESUME_BUCKET_NAME}"
 }
@@ -642,6 +660,20 @@ create_eventarc_chat_channel() {
   fi
   log "Creating Eventarc channel..."
   gcloud eventarc channels create "${CHAT_CHANNEL}" --location "${REGION}"
+}
+
+#############################################
+# Setup needed for Google VErtexAI
+#############################################
+setup_vertexai() {
+  if ! gsutil ls "gs://${ME_EMBEDDING_BUCKET}" &>/dev/null; then
+    log "Creating GCS bucket [${ME_EMBEDDING_BUCKET}]..."
+    gsutil mb -p "${PROJECT_ID}" -c regional -l "${REGION}" "gs://${ME_EMBEDDING_BUCKET}"
+  else
+    log "GCS bucket [${ME_EMBEDDING_BUCKET}] already exists. Skipping..."
+  fi
+
+  gsutil cp components/vertex_test/dummy_embeddings.json "gs://${ME_EMBEDDING_BUCKET}/init_index/dummy_embeddings.json"
 }
 
 #############################################

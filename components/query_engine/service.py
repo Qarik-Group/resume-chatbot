@@ -11,60 +11,40 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Main API service that handles REST API calls to LLM and is run on server."""
+"""Main service that handles REST API calls with user questions and invokes backend LLMs to get responses."""
 
-from pathlib import Path
-import threading
 from typing import Annotated, Any
-from datetime import datetime
-from langchain.llms import VertexAI
-from langchain.chains import RetrievalQA
-from langchain.vectorstores import Chroma
-from langchain.embeddings import VertexAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import PyPDFDirectoryLoader
+
+import chat_dao
+import langchain_tools
+from common import api_tools, constants, llamaindex_tools, solution
+from common.log import Logger, log_params
 from fastapi import Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import chat_dao
-from common import api_tools, constants, googleai_tools, llm_tools, solution, gcs_tools, admin_dao
-from common.cache import cache
-from common.log import Logger, log_params, log
+from query_engine import goog_search_tools
+from query_engine.chat_dao import VoteStatistic
+from query_engine import vertexai_tools
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
 
-LAST_LOCAL_INDEX_UPDATE: datetime | None = None
-"""Keep track of the most recent local index update to avoid unnecessary refreshes."""
 
-LLAMA_FILE_LOCK = threading.Lock()
-"""Lock to prevent concurrent updates of the same index - needed in case we have more than one request processing."""
+class AskInput(BaseModel):
+    """Input parameters for the ask endpoint."""
+    question: str
+    """Question to ask the LLM model."""
+    prompt_prefix: str = ''
+    """Prefix to add to the question before passing it to the LLM model."""
 
-CHROMA_LOCK = threading.Lock()
-"""Lock to prevent concurrent creation of langchain."""
 
-LOCAL_DEVELOPMENT_MODE: bool = bool(solution.getenv('LOCAL_DEVELOPMENT_MODE', default=False))
-"""Flag to indicate if we are running in local development mode."""
+class VoteInput(BaseModel):
+    """Input parameters for the vote endpoint."""
+    llm_backend: str
+    question: str
+    answer: str
+    upvoted: bool
 
-RESUME_BUCKET_NAME: str = solution.getenv('RESUME_BUCKET_NAME')
-"""Location to download source PDF resumes from."""
-
-INDEX_BUCKET: str = solution.getenv('EMBEDDINGS_BUCKET_NAME')
-"""Location to download llama-index embeddings from."""
-
-LOCAL_DEV_DATA_DIR: str = 'dev/tmp'
-"""Location of the local data directory for development on local machine."""
-
-LOCAL_PROD_DATA_DIR: str = 'tmp/chroma-source-resumes'
-"""Location of the local data directory for storing resumes PDF files copied from GCS."""
-
-if LOCAL_DEVELOPMENT_MODE:
-    LLAMA_INDEX_DIR: str = 'dev/tmp/embeddings'
-else:
-    LLAMA_INDEX_DIR = 'tmp/embeddings'
-
-LANGCHAIN_ENGINE = None
-"""Langchain engine singleton that is used to answer questions."""
 
 app = api_tools.ServiceAPI(title='Resume Chatbot API (experimental)',
                            description='Request / response API for the Resume Chatbot that uses LLM for queries.')
@@ -88,7 +68,7 @@ _vote_db = chat_dao.VoteDao()
 """Data Access Object to the database of votes."""
 
 
-def get_user_id(user_email: str | None) -> str:
+def _get_user_id(user_email: str | None) -> str:
     """Extract user ID from the request headers.˝"""
     user_id: str = 'anonymous'
     if user_email is None:
@@ -102,48 +82,19 @@ def get_user_id(user_email: str | None) -> str:
     return user_id
 
 
-def run_query(question: Any, user_id: str, query_method: Any, llm_backend: str) -> Any:
-    """Run a query against the LLM model."""
-    try:
-        logger.debug(f'Querying LLM [{llm_backend}]...')
-        answer = query_method(question)
-    except Exception as e:
-        logger.error('Error querying LLM: %s', e)
-        try:
-            _users_db.save_question_answer(user_id=user_id,
-                                           question=str(question),
-                                           answer=f'Error querying LLM: {e}',
-                                           llm_backend=llm_backend)
-        except Exception:
-            pass
-        raise SystemError('Error querying LLM: %s' % e)
-
-    _users_db.save_question_answer(user_id=user_id,
-                                   question=str(question),
+def _store_answer(data: AskInput, answer: str, x_goog: Any, provider: constants.LlmProvider):
+    _users_db.save_question_answer(user_id=_get_user_id(x_goog),
+                                   question=f'{data.prompt_prefix}===>{data.question}',
                                    answer=str(answer),
-                                   llm_backend=llm_backend)
-    return answer
-
-
-class AskInput(BaseModel):
-    """Input parameters for the ask endpoint."""
-    question: str
-
-
-class VoteInput(BaseModel):
-    """Input parameters for the vote endpoint."""
-    llm_backend: str
-    question: str
-    answer: str
-    upvoted: bool
+                                   llm_backend=str(provider))
 
 
 @app.get('/people')
 @log_params
 def list_people() -> list[str]:
     """List all people names found in the database of uploaded resumes."""
-    refresh_llama_index()
-    people = llm_tools.load_resumes(resume_dir='', index_dir=LLAMA_INDEX_DIR)
+    llamaindex_tools._refresh_llama_index()
+    people = llamaindex_tools.load_resumes(resume_dir='')
     return [person for person in people.keys()]
 
 
@@ -154,186 +105,79 @@ def healthcheck() -> dict:
     return solution.health_status()
 
 
-@log_params
-def ask_llm(data: AskInput,
-            provider: constants.LlmProvider,
-            x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
-    """Ask a question to the given LLM model."""
-    question = data.question
-    refresh_llama_index()
-    query_engine = llm_tools.get_resume_query_engine(index_dir=LLAMA_INDEX_DIR, provider=provider)
-    if query_engine is None:
-        raise SystemError('No resumes found in the database. Please upload resumes.')
-
-    user_id: str = get_user_id(x_goog_authenticated_user_email)
-    answer = run_query(question=question,
-                       user_id=user_id,
-                       query_method=query_engine.query,
-                       llm_backend=constants.GPT_MODEL)
-    return {'answer': str(answer)}
-
-
-@app.post('/ask_gpt')
+@app.post('/ask_gpt', name='Ask a question to the GPT-3 model using LlamaIndex and local embeddings store.'
+          ' This can be slow because of LlamaIndex chain implementation.')
 @log_params
 def ask_gpt(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
-    """Ask a question to the GPT-3 model and return the answer."""
-    return ask_llm(data=data, provider=constants.LlmProvider.OPEN_AI, x_goog_authenticated_user_email=x_goog_authenticated_user_email)
-
-
-@app.post('/ask_palm')
-@log_params
-def ask_palm(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
-    """Ask a question to the Google PaLM model."""
-    return ask_llm(data=data, provider=constants.LlmProvider.GOOGLE_PALM, x_goog_authenticated_user_email=x_goog_authenticated_user_email)
-
-
-@app.post('/ask_google')
-@log_params
-def ask_google(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
-    """Ask a question to the Google Enterprise Search (Gen AI) model."""
-    question = data.question
-    user_id: str = get_user_id(x_goog_authenticated_user_email)
-    answer = run_query(question=question,
-                       user_id=user_id,
-                       query_method=googleai_tools.query,
-                       llm_backend='Google Enterprise Search')
+    """Ask a question to the GPT-3 model."""
+    answer = llamaindex_tools.query(question=f'{data.prompt_prefix}\n{data.question}')
+    _store_answer(data=data,
+                  answer=answer,
+                  x_goog=x_goog_authenticated_user_email,
+                  provider=constants.LlmProvider.OPEN_AI)
     return {'answer': str(answer)}
 
 
-@app.post('/ask_vertex')
+@app.post('/ask_ent_search', name='Ask a question to the Google GenAI using Enterprise Search with summarization.')
 @log_params
-def ask_local(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
-    """Ask a question to the local LLM model."""
-    global LANGCHAIN_ENGINE
-    refresh_chroma_index()
-    answer = run_query(question={'query': data.question},
-                       user_id=get_user_id(x_goog_authenticated_user_email),
-                       query_method=LANGCHAIN_ENGINE,
-                       llm_backend=f'Local LLM [{constants.GOOGLE_PALM_MODEL_LOCAL}]')
-    # return {'answer': str(answer)}
-    return {'answer': answer['result']}
+def ask_goog_ent_search(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the Google GenAI using Enterprise Search with summarization."""
+    answer = goog_search_tools.query(question=f'{data.prompt_prefix}\n{data.question}')
+    _store_answer(data=data,
+                  answer=answer,
+                  x_goog=x_goog_authenticated_user_email,
+                  provider=constants.LlmProvider.GOOG_ENT_SEARCH)
+    return {'answer': str(answer)}
 
 
-@app.post('/vote')
+@app.post('/ask_palm_chroma_langchain',
+          name='Ask a question to the Google PaLM model using local index store in ChromaDB and Langchain.')
 @log_params
-def vote(data: VoteInput) -> list:
-    """Submit user vote for the provided response."""
+def ask_palm_chroma_langchain(data: AskInput,
+                              x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the Google PaLM model using local index store in ChromaDB and Langchain."""
+    answer = langchain_tools.query(question=f'{data.prompt_prefix}\n{data.question}')
+    _store_answer(data=data,
+                  answer=answer,
+                  x_goog=x_goog_authenticated_user_email,
+                  provider=constants.LlmProvider.GOOG_PALM)
+    return {'answer': answer}
+
+
+@app.post('/ask_vertexai',
+          name='Ask a question to the Google PaLM 2 model via Langchain using VertexAI Embeddings and Index Search.')
+@log_params
+def ask_vertexai(data: AskInput, x_goog_authenticated_user_email: Annotated[str | None, Header()] = None) -> dict[str, str]:
+    """Ask a question to the Google PaLM 2 model via Langchain using VertexAI Embeddings and Index Search.
+
+    This should scale well for large datasets."""
+    answer = vertexai_tools.query(data.question)
+    _store_answer(data=data,
+                  answer=answer,
+                  x_goog=x_goog_authenticated_user_email,
+                  provider=constants.LlmProvider.GOOG_VERTEX)
+    return {'answer': answer}
+
+
+@app.post('/vote', name='Submit user vote for the LLM answer. Returns total number of votes for all LLMs.')
+@log_params
+def vote(data: VoteInput) -> list[VoteStatistic]:
+    """Submit user vote for the provided response.
+
+    Returns: total number of votes for each registered LLM backend. For example:
+    [{'name': 'ChatGPT',
+        'up': 11,
+        'down': -22, },
+    {'name': 'Google Enterprise Search',
+        'up': 33,
+        'down': -44, },
+    {'name': 'Google VertexAI',
+        'up': 77,
+        'down': -88, },
+    ]
+    """
     _vote_db.submit_vote(llm=data.llm_backend,
                          question=data.question,
                          answer=data.answer,
                          upvoted=data.upvoted)
     return _vote_db.get_llm_totals()
-    # return [{'name': 'ChatGPT',
-    #          'up': 11,
-    #          'down': -22, },
-    #         {'name': 'Google Enterprise Search',
-    #          'up': 33,
-    #          'down': -44, },
-    #         {'name': 'Google PaLM',
-    #          'up': 55,
-    #          'down': -66, },
-    #         {'name': 'Google VertexAI',
-    #          'up': 77,
-    #          'down': -88, },
-    #         ]
-
-
-@cache
-@log
-def refresh_llama_index():
-    """Refresh the index of resumes from the database using Llama-Index."""
-    if LOCAL_DEVELOPMENT_MODE:
-        index_path = Path(LLAMA_INDEX_DIR)
-        if not index_path.exists():
-            # TODO - need to generate proper embeddings for each provider, not hard coded
-            llm_tools.generate_embeddings(resume_dir=LOCAL_DEV_DATA_DIR, index_dir=LLAMA_INDEX_DIR,
-                                          provider=constants.LlmProvider.OPEN_AI)
-        return
-
-    global LAST_LOCAL_INDEX_UPDATE
-    global LLAMA_FILE_LOCK
-    last_resume_refresh = admin_dao.AdminDAO().get_resumes_timestamp()
-    if LAST_LOCAL_INDEX_UPDATE is None or LAST_LOCAL_INDEX_UPDATE < last_resume_refresh:
-        logger.info('Refreshing local index of resumes...')
-        # Prevent concurrent updates of the same index - needed in case we have more than one request processing
-        with LLAMA_FILE_LOCK:
-            # Check for condition again because the index may have been updated while we were waiting for the lock
-            if LAST_LOCAL_INDEX_UPDATE is None or LAST_LOCAL_INDEX_UPDATE < last_resume_refresh:
-                gcs_tools.download(bucket_name=INDEX_BUCKET, local_dir=LLAMA_INDEX_DIR)
-        LAST_LOCAL_INDEX_UPDATE = last_resume_refresh
-        return
-
-    logger.info('Skipping refresh of resumes index because no changes in source resumes were detected.')
-
-
-@log
-def create_langchain_client() -> None:
-    global LANGCHAIN_ENGINE
-
-    if LOCAL_DEVELOPMENT_MODE:
-        source_pdf_path = LOCAL_DEV_DATA_DIR
-    else:
-        source_pdf_path = LOCAL_PROD_DATA_DIR
-        # Download source PDF files from GCS into local folder for processing
-        gcs_tools.download(bucket_name=RESUME_BUCKET_NAME, local_dir=LOCAL_PROD_DATA_DIR)
-
-    # Load docs...
-    loader = PyPDFDirectoryLoader(path=source_pdf_path)
-    documents = loader.load()
-
-    # split the documents into chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
-    docs = text_splitter.split_documents(documents)
-    logger.info(f'# of documents created from source PDFs = {len(docs)}')
-
-    embeddings = VertexAIEmbeddings()
-
-    # Store docs in local vector store as index
-    # it may take a while since API is rate limited
-    db = Chroma.from_documents(documents=docs, embedding=embeddings)
-
-    # Expose index to the retriever
-    retriever = db.as_retriever(search_type='similarity', search_kwargs={'k': 15})
-
-    # LLM model
-    llm = VertexAI(model_name=constants.GOOGLE_PALM_MODEL_LOCAL, max_output_tokens=1024,
-                   temperature=0.0, top_p=0.3, top_k=10, verbose=True)
-
-    # Create chain to answer questions
-    # Uses LLM to synthesize results from the search index.
-    # We use Vertex PaLM Text API for LLM
-    LANGCHAIN_ENGINE = RetrievalQA.from_chain_type(
-        llm=llm, chain_type='stuff', retriever=retriever, return_source_documents=False)
-
-
-@cache
-@log
-def refresh_chroma_index():
-    """Refresh the index of resumes from the database using Chroma Vector DB."""
-    global LAST_LOCAL_INDEX_UPDATE
-    global CHROMA_LOCK
-    global LANGCHAIN_ENGINE
-
-    if LOCAL_DEVELOPMENT_MODE:
-        # In local development mode we don't need to refresh the index and only load it on the first time
-        if LAST_LOCAL_INDEX_UPDATE is None:
-            last_resume_refresh = solution.now()
-        else:
-            last_resume_refresh = LAST_LOCAL_INDEX_UPDATE
-    else:
-        last_resume_refresh = admin_dao.AdminDAO().get_resumes_timestamp()
-        if last_resume_refresh is None:
-            last_resume_refresh = solution.now()
-
-    if LAST_LOCAL_INDEX_UPDATE is None or \
-            LANGCHAIN_ENGINE is None or \
-            LAST_LOCAL_INDEX_UPDATE < last_resume_refresh:
-        # Prevent concurrent updates of the same index - needed in case we have more than one request processing
-        with CHROMA_LOCK:
-            # Check for condition again because the index may have been updated while we were waiting for the lock
-            if LAST_LOCAL_INDEX_UPDATE is None or \
-                    LANGCHAIN_ENGINE is None or \
-                    LAST_LOCAL_INDEX_UPDATE < last_resume_refresh:
-                create_langchain_client()
-        LAST_LOCAL_INDEX_UPDATE = last_resume_refresh
-        return

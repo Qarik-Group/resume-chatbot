@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from common import constants, googleai_tools, llm_tools
+from common import constants, llamaindex_tools
 from common.log import Logger, log
+from query_engine import goog_search_tools
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
@@ -23,6 +24,23 @@ logger.info('Initializing...')
 def test_queries(query_engine) -> None:
     """Test sample queries."""
     queries = [
+        'Who is Roman Kharkovski?',
+        'Where does Steven Kim work now?',
+        'What is the current job title of Roman Kharkovski?',
+        'From the list of all people with resumes, who has the strongest experience with Anthos and GKE?',
+        'From the list of all people with resumes, who has the strongest experience with Oracle Databases?',
+        'What is Roman Kharkovski current job title?',
+        'Who is Steven Kim?',
+        'Compare skills of Steven Kim and Roman Kharkovski?',
+        'Does John Bishop know Java?',
+        'How many years of experience in IT industry does Roman Kharkovski have?',
+        'How many years of experience in IT industry does Steven Kim have?',
+        'When did Roman Kharkovski work for Google?',
+        'List 10 people with Java skills.',
+        'Will Roman Kharkovski make a good CEO?',
+        'For what company did Roman Kharkovski work the longest?',
+        'What is the most common skill among all people?',
+        'Tell me about Roman Kharkovski strengths and weaknesses?',
         'What are Roman Kharkovski skills?',
         'What is the current job title of Steven Kim?',
         'Does John Bishop have Java experience?',
@@ -99,7 +117,7 @@ def main():
     print('*************************************************************************')
     # provider = constants.LlmProvider.GOOGLE_PALM
     provider = constants.LlmProvider.OPEN_AI
-    gpt_query_engine = llm_tools.get_resume_query_engine(
+    gpt_query_engine = llamaindex_tools._get_resume_query_engine(
         index_dir='dev/tmp/embeddings', resume_dir='dev/tmp/resumes', provider=provider)
 
     if gpt_query_engine is None:
@@ -108,7 +126,7 @@ def main():
 
     test_queries(gpt_query_engine)
     return
-    test_queries(googleai_tools)
+    test_queries(goog_search_tools)
 
     print('\n\nINTERACTIVE MODE:')
     while True:
@@ -125,7 +143,7 @@ def main():
                 # response = query_engine.query(query_text + constants.QUERY_SUFFIX)
                 print(f'GPT response: {gpt_response}')
                 # Test Google AI
-                goog_response = googleai_tools.query(query_text)
+                goog_response = goog_search_tools.query(query_text)
                 print(f'Google response: {goog_response}')
             except Exception as e:
                 logger.error('Error processing query: %s, error: %s', query_text, e)

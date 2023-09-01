@@ -14,7 +14,7 @@
 """Main API service that handles REST API calls to LLM and is run on server."""
 
 import fastapi
-from common import api_tools, constants, gcs_tools, llm_tools, solution, admin_dao
+from common import api_tools, constants, gcs_tools, llamaindex_tools, solution, admin_dao
 from common.log import Logger, log_params
 
 logger = Logger(__name__).get_logger()
@@ -37,7 +37,7 @@ def update_embeddings(event_data: dict = fastapi.Body()) -> dict:
     """Handle resume updates in GCS bucket and generate embeddings."""
     gcs_tools.download(bucket_name=event_data['bucket'], local_dir=RESUME_DIR)
     # TODO - need to generate proper embeddings for each provider, not hard coded
-    llm_tools.generate_embeddings(resume_dir=RESUME_DIR, index_dir=INDEX_DIR, provider=constants.LlmProvider.OPEN_AI)
+    llamaindex_tools.generate_embeddings(resume_dir=RESUME_DIR, index_dir=INDEX_DIR, provider=constants.LlmProvider.OPEN_AI)
     gcs_tools.upload(bucket_name=INDEX_BUCKET, local_dir=INDEX_DIR)
     admin_dao.AdminDAO().touch_resumes(timestamp=solution.now())
     return {'status': 'ok'}

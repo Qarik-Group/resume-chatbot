@@ -22,6 +22,7 @@ source "./.env"
 source "./utils.sh"
 
 print_header "Configuring Resume Chatbot"
+setup_local_os
 authenticate_gcp
 install_firestore_emulator
 install_python_virtual_env
@@ -35,6 +36,7 @@ define_resume_svc_sa
 create_sa "${UI_SVC_NAME}"
 setup_resume_updates
 create_eventarc_chat_channel
+setup_vertexai
 
 if [[ "${ENABLE_IAP}" == "true" ]]; then
   enable_oauth
