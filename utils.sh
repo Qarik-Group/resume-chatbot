@@ -693,24 +693,7 @@ setup_resume_updates() {
 # Setup needed for Google VertexAI
 #############################################
 setup_vertexai() {
-  if ! gsutil ls "gs://${ME_EMBEDDING_BUCKET}" &>/dev/null; then
-    log "Creating GCS bucket [${ME_EMBEDDING_BUCKET}]..."
-    gsutil mb -p "${PROJECT_ID}" -c regional -l "${REGION}" "gs://${ME_EMBEDDING_BUCKET}"
-  else
-    log "GCS bucket [${ME_EMBEDDING_BUCKET}] already exists. Skipping..."
-  fi
-
   pushd components/setup || die
-  log "Installing Python packages..."
-  pip install -r requirements.txt
-
-  log "Creating dummy embeddings file..."
-  python3 create_dummy_embeddings.py
-
-  log "Copy dummy embeddings to the GCS bucket..."
-  gsutil cp components/setup/dummy_embeddings.json "gs://${ME_EMBEDDING_BUCKET}/init_index/dummy_embeddings.json"
-
-  log "Creating VertexAI Embeddings engine and other needed infra..."
-  python3 vertexai_setup.py
+  ./setup.sh
   popd || die
 }
