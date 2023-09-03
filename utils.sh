@@ -644,7 +644,7 @@ create_resume_bucket() {
 #############################################
 # Create a GCS bucket for storing processed embeddings
 #############################################
-create_embeddings_bucket() {
+create_llamaindex_embeddings_bucket() {
   if ! gsutil ls "gs://${EMBEDDINGS_BUCKET_NAME}" &>/dev/null; then
     log "Creating GCS bucket for resume storage..."
     gsutil mb -p "${PROJECT_ID}" -c regional -l "${REGION}" "gs://${EMBEDDINGS_BUCKET_NAME}"

@@ -30,13 +30,13 @@ enable_apis
 create_registry
 create_firestore_instance
 create_resume_bucket
-create_embeddings_bucket
+create_llamaindex_embeddings_bucket
+setup_vertexai
 define_chat_svc_sa
 define_resume_svc_sa
 create_sa "${UI_SVC_NAME}"
 setup_resume_updates
 create_eventarc_chat_channel
-setup_vertexai
 
 if [[ "${ENABLE_IAP}" == "true" ]]; then
   enable_oauth
