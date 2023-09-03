@@ -102,5 +102,7 @@ data/*
 **/env/
 **/venv/
 **/ENV/
-**/env.bak/
+**/env.bak
+**/.env.bak
 **/venv.bak/
+**/.venv.bak/

@@ -20,96 +20,35 @@ https://github.com/GoogleCloudPlatform/generative-ai/blob/main/language/use-case
 """
 
 
-import time
-from typing import List
 import langchain
 import vertexai
 from google.cloud import aiplatform
 from langchain.document_loaders import GCSDirectoryLoader
-from langchain.embeddings import VertexAIEmbeddings
-from langchain.llms import VertexAI
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from pydantic import BaseModel
-from utils.matching_engine import MatchingEngine
-from utils.matching_engine_utils import MatchingEngineUtils
-print(f'Vertex AI SDK version: {aiplatform.__version__}')
+from query_engine.matching_engine import MatchingEngine, CustomVertexAIEmbeddings
+from query_engine.matching_engine_tools import MatchingEngineUtils, ME_DIMENSIONS
+from common import solution
+from common.log import Logger
+logger = Logger(__name__).get_logger()
+logger.info('Initializing...')
+logger.info(f'Vertex AI SDK version: {aiplatform.__version__}')
+logger.info(f'LangChain version: {langchain.__version__}')
 
-
-print(f'LangChain version: {langchain.__version__}')
-
-
-PROJECT_ID = 'rk-skills-search'  # @param {type:'string'}
-REGION = 'us-central1'  # @param {type:'string'}
-ME_REGION = 'us-central1'
-ME_INDEX_NAME = f'{PROJECT_ID}-me-index'  # @param {type:'string'}
-ME_EMBEDDING_DIR = f'matching-engine-embeddings-{PROJECT_ID}'  # @param {type:'string'}
-ME_DIMENSIONS = 768  # when using Vertex PaLM Embedding
-GCS_BUCKET_DOCS = f'resume-originals-{PROJECT_ID}'
+PROJECT_ID: str = solution.PROJECT_ID
+REGION: str = solution.REGION
+ME_REGION = solution.REGION
+ME_INDEX_NAME: str = f'{PROJECT_ID}-me-index'
+ME_EMBEDDING_DIR: str = solution.getenv('ME_EMBEDDING_BUCKET')
+GCS_BUCKET_DOCS = solution.getenv('RESUME_BUCKET_NAME')
 
 # Initialize Vertex AI SDK
 vertexai.init(project=PROJECT_ID, location=REGION)
 
-# Utility functions for Embeddings API with rate limiting
-
-
-def rate_limit(max_per_minute):
-    period = 60 / max_per_minute
-    print('Waiting')
-    while True:
-        before = time.time()
-        yield
-        after = time.time()
-        elapsed = after - before
-        sleep_time = max(0, period - elapsed)
-        if sleep_time > 0:
-            print('.', end='')
-            time.sleep(sleep_time)
-
-
-class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
-    requests_per_minute: int
-    num_instances_per_batch: int
-
-    # Overriding embed_documents method
-    def embed_documents(self, texts: List[str]):
-        limiter = rate_limit(self.requests_per_minute)
-        results = []
-        docs = list(texts)
-
-        while docs:
-            # Working in batches because the API accepts maximum 5
-            # documents per request to get embeddings
-            head, docs = (
-                docs[: self.num_instances_per_batch],
-                docs[self.num_instances_per_batch:],
-            )
-            chunk = self.client.get_embeddings(head)
-            results.extend(chunk)
-            next(limiter)
-
-        return [r.values for r in results]
-
-
-"""Initialize LangChain Models.
-
-You initialize LangChain Models with the pre-trained text, chat and embeddings generation model called `text-bison@001`, `chat-bison@001` and `textembedding-gecko@001` respectively.
-"""
-# Text model instance integrated with langChain
-llm = VertexAI(
-    model_name='text-bison@001',
-    max_output_tokens=1024,
-    temperature=0.2,
-    top_p=0.8,
-    top_k=40,
-    verbose=True,
-)
 
 # Embeddings API integrated with langChain
 EMBEDDING_QPM = 100
-EMBEDDING_NUM_BATCH = 5
 embeddings = CustomVertexAIEmbeddings(
     requests_per_minute=EMBEDDING_QPM,
-    num_instances_per_batch=EMBEDDING_NUM_BATCH,
 )
 
 """
@@ -123,18 +62,8 @@ NOTE: Please note creating an Index on Matching Engine and deploying the Index t
     - `ME_INDEX_NAME`: Matching Engine index display name
     - `ME_EMBEDDING_DIR`: Cloud Storage path to allow inserting, updating or deleting the contents of the Index
     - `ME_DIMENSIONS`: The number of dimensions of the input vectors. Vertex AI Embedding API generates 768 dimensional vector embeddings.
-"""
 
-# Create a dummy embeddings file to initialize when creating the index
-# dummy embedding
-# init_embedding = {'id': str(uuid.uuid4()), 'embedding': list(np.zeros(ME_DIMENSIONS))}
-
-# # dump embedding to a local file
-# with open('embeddings_0.json', 'w') as f:
-#     json.dump(init_embedding, f)
-
-"""
-You can [create index](https://cloud.google.com/vertex-ai/docs/matching-engine/create-manage-index#create-index) on Vertex AI Matching Engine for batch updates or streaming updates.
+    You can [create index](https://cloud.google.com/vertex-ai/docs/matching-engine/create-manage-index#create-index) on Vertex AI Matching Engine for batch updates or streaming updates.
 
 This creates Matching Engine Index:
 - With [streaming updates](https://cloud.google.com/vertex-ai/docs/matching-engine/create-manage-index#create-stream)
@@ -150,18 +79,18 @@ Vector Similarity Search](https://ai.googleblog.com/2020/07/announcing-scann-eff
 
 mengine = MatchingEngineUtils(PROJECT_ID, ME_REGION, ME_INDEX_NAME)
 
-# print('Started Index creation...')
-# index = mengine.create_index(
-#     embedding_gcs_uri=f'gs://{ME_EMBEDDING_DIR}/init_index',
-#     dimensions=ME_DIMENSIONS,
-#     index_update_method='streaming',
-#     index_algorithm='tree-ah',
-# )
+logger.info('Started Index creation...')
+index = mengine.create_index(
+    embedding_gcs_uri=f'gs://{ME_EMBEDDING_DIR}/init_index',
+    dimensions=ME_DIMENSIONS,
+    index_update_method='streaming',
+    index_algorithm='tree-ah',
+)
 
-# if index:
-#     print(index.name)
-# else:
-#     print('Index creation still in progress...')
+if index:
+    logger.info(index.name)
+else:
+    logger.info('Index creation still in progress...')
 
 """
 Deploy index to Index Endpoint on Matching Engine. This [deploys the index to a public endpoint](https://cloud.google.com/vertex-ai/docs/matching-engine/deploy-index-public). The deployment operation creates a  public endpoint that will be used for querying the index for approximate nearest neighbors.
@@ -169,13 +98,13 @@ Deploy index to Index Endpoint on Matching Engine. This [deploys the index to a 
 For deploying index to a Private Endpoint, refer to the [documentation](https://cloud.google.com/vertex-ai/docs/matching-engine/deploy-index-vpc) to set up pre-requisites.
 """
 
-# index_endpoint = mengine.deploy_index()
-# if index_endpoint:
-#     print(f'Index endpoint resource name: {index_endpoint.name}')
-#     print(f'Index endpoint public domain name: {index_endpoint.public_endpoint_domain_name}')
-#     print('Deployed indexes on the index endpoint:')
-#     for d in index_endpoint.deployed_indexes:
-#         print(f'    {d.id}')
+index_endpoint = mengine.deploy_index()
+if index_endpoint:
+    logger.info(f'Index endpoint resource name: {index_endpoint.name}')
+    logger.info(f'Index endpoint public domain name: {index_endpoint.public_endpoint_domain_name}')
+    logger.info('Deployed indexes on the index endpoint:')
+    for d in index_endpoint.deployed_indexes:
+        logger.info(f'    {d.id}')
 
 """
 Add Document Embeddings to Matching Engine - Vector Store
@@ -189,7 +118,7 @@ The document corpus is hosted on Cloud Storage bucket (at `gs://github-repo/docu
 Ingest PDF files
 """
 
-print(f'Processing documents from {GCS_BUCKET_DOCS}')
+logger.info(f'Processing documents from {GCS_BUCKET_DOCS}')
 loader = GCSDirectoryLoader(
     project_name=PROJECT_ID, bucket=GCS_BUCKET_DOCS, prefix=''
 )
@@ -205,7 +134,7 @@ for document in documents:
     source = f'{doc_source_prefix}/{doc_source_suffix}'
     document.metadata = {'source': source, 'document_name': document_name}
 
-print(f'# of documents loaded (pre-chunking) = {len(documents)}')
+logger.info(f'# of documents loaded (pre-chunking) = {len(documents)}')
 
 # Verify document metadata
 documents[0].metadata
@@ -225,15 +154,15 @@ doc_splits = text_splitter.split_documents(documents)
 for idx, split in enumerate(doc_splits):
     split.metadata['chunk'] = idx
 
-print(f'# of documents = {len(doc_splits)}')
+logger.info(f'# of documents = {len(doc_splits)}')
 
 doc_splits[0].metadata
 
 # Configure Matching Engine as Vector Store. Get Matching Engine Index id and Endpoint id
 
 ME_INDEX_ID, ME_INDEX_ENDPOINT_ID = mengine.get_index_and_endpoint()
-print(f'ME_INDEX_ID={ME_INDEX_ID}')
-print(f'ME_INDEX_ENDPOINT_ID={ME_INDEX_ENDPOINT_ID}')
+logger.info(f'ME_INDEX_ID={ME_INDEX_ID}')
+logger.info(f'ME_INDEX_ENDPOINT_ID={ME_INDEX_ENDPOINT_ID}')
 
 # Initialize Matching Engine vector store with text embeddings model
 me = MatchingEngine.from_components(
@@ -273,5 +202,5 @@ metadatas = [
 doc_ids = me.add_texts(texts=texts, metadatas=metadatas)
 
 # Validate semantic search with Matching Engine is working
-me.similarity_search('What are video localized narratives?', k=2)
-me.similarity_search('What is NFC?', k=2, search_distance=0.4)
+me.similarity_search('List all people with Java skills?', k=2)
+me.similarity_search('Who is the CTO of Qarik Group?', k=2)

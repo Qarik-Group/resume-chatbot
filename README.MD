@@ -1,4 +1,6 @@
-<!-- Copyright 2023 Qarik Group, LLC
+<!--
+Copyright 2023 Google LLC
+Copyright 2023 Qarik Group, LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -77,7 +79,8 @@ In order to build and deploy this project you need the following:
 
 ## Setup
 
-- [Create](https://console.cloud.google.com/projectcreate) a Google Cloud Platform (GCP) project.
+- [Create](https://console.cloud.google.com/projectcreate) a Google Cloud Platform (GCP) project with assigned billing
+  account.
 
 - Clone the repo
 
@@ -89,17 +92,35 @@ In order to build and deploy this project you need the following:
 - Copy template environment file:
 
   ```bash
-  cp "${PROJECT_HOME}/.env.example" "${PROJECT_HOME}/.env"
+  cd "${PROJECT_HOME}"
+  cp .env.example .env
   ```
 
 - Update the '.env' file with your own values, including the
-  [OpenAI API Key](https://platform.openai.com/account/api-keys). Also check the ENABLE_IAP setting and set it to "true"
-  if you want to enable IAP in front of your Cloud Run instances. However be aware that the initial setup will take more
-  than an hour because it takes that long to propagate the SSL certificate settings.
+  [OpenAI API Key](https://platform.openai.com/account/api-keys) and any other relevant information for your
+  organization or project.
 
-- Add any number of PDF files with resumes to the [data](data/) folder. Files shall be named using
-  'Firstname Lastname.pdf' format with space separating first and last name. Optionally you can append 'Resume' after
-  last name. For example: 'Roman Kharkovski Resume.pdf'.
+  - Check the `ENABLE_IAP` setting and set it to `true` if you want to enable IAP in front of your Cloud Run instances.
+    However aware that the initial setup will take more than an hour because it takes that long to propagate the SSL
+    certificate settings. I recommend setting `ENABLE_EAP` to `false` for the simple development and experimentation.
+
+- Add any number of PDF files with resumes to the [data](data) folder. Files shall be named using 'Firstname
+  Lastname.pdf' format with space separating first and last name. Optionally you can append 'Resume' after last name.
+  For example: 'Roman Kharkovski Resume.pdf'.
+
+- Create new virtual environment (if VSCode prompts you to switch to this new virtual environment, accept it). You may
+  decide to have a separate Virtual Environment for each service, or have one common for all services:
+
+  ```bash
+  cd "${PROJECT_HOME}"
+  python3 -m venv .venv
+  ```
+
+- Activate the Python virtual environment in your terminal (only do it once in a terminal session):
+
+  ```bash
+  source "${PROJECT_HOME}/.venv/bin/activate"
+  ```
 
 - Complete the setup:
 
@@ -111,21 +132,6 @@ In order to build and deploy this project you need the following:
 ## Test query engine locally
 
 The experimentation with the queries can be done on a local machine:
-
-- Create new virtual environment (if VSCode prompts you to switch to this new virtual environment, accept it). You may
-    decide to have a separate Virtual Environment for each service, or have one common for all services:
-
-    ```bash
-    cd "${PROJECT_HOME}"
-    python3 -m venv .venv
-    ```
-
-- Activate the Python virtual environment in your terminal (only do it once in a terminal session):
-
-  ```bash
-  cd "${PROJECT_HOME}"
-  source .venv/bin/activate
-  ```
 
 - Run the set of pre-built tests against the query engine, or use it in the interactive mode:
 

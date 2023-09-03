@@ -25,6 +25,7 @@ deploy() {
     --service-account "${CHAT_SVC_NAME}-sa@${PROJECT_ID}.iam.gserviceaccount.com"
     --region "${REGION}"
     --project "${PROJECT_ID}"
+    --memory "4Gi"
     --set-env-vars "OPENAI_API_KEY=${OPENAI_API_KEY}"
     --set-env-vars "GOOGLE_PALM_API_KEY=${GOOGLE_PALM_API_KEY}"
     --set-env-vars "EMBEDDINGS_BUCKET_NAME=${EMBEDDINGS_BUCKET_NAME}"

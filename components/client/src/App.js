@@ -39,6 +39,9 @@ import "./App.css";
 
 import axios from "axios";
 
+// This is needed to decode JWT token for debugging
+const atob = require('atob'); // If you're in a Node.js environment, you'll need this. Browsers have atob() built-in.
+
 const drawerWidth = 100;
 
 const Main = styled("main")(({ theme }) => ({
@@ -74,6 +77,12 @@ const fakeIdToken = "fakeIdToken";
 
 // Current voting stats for all different LLM engines
 let llmVotingStats = null;
+
+// Prefixes for the answers from various LLM engines
+const llmNameGpt = "Chat GPT (LlamaIndex)";
+const llmNameGoog = "Google GenAI (Enterprise Search)";
+const llmNamePalm = "Google Vertex AI (PaLM, Vector Search, Embeddings, LangChain)";
+const llmNameVertex = "Google Vertex AI (PaLM, ChromaDB, LangChain)";
 
 // Which LLM engines to use
 let useGoogLlm = true;
@@ -151,6 +160,19 @@ function App() {
     onError: (error) => console.log("Login Failed:", error),
   });
 
+  const decodePayload = (token) => {
+    try {
+      const payload = token.split(".")[1];
+      const decodedPayload = JSON.parse(atob(payload));
+      const expTime = decodedPayload.exp; // Extract the 'exp' field
+      const date = new Date(expTime * 1000); // Convert UNIX epoch time to Date object
+      console.log(`Token will expire at: ${date}`);
+      return decodedPayload;
+    } catch (error) {
+      console.error("An error occurred while decoding the token:", error);
+    }
+  };
+
   console.info(`DEBUG: backendUrl: ${backendUrl}, idToken: ${idToken}`);
 
   useEffect(() => {
@@ -190,6 +212,8 @@ function App() {
         })
         .then((res) => {
           setIdToken(user.access_token);
+          console.info(`Auth ID token after authentication: ${idToken}`);
+          decodePayload(idToken);
           userName = res.data.name;
           console.info(`DEBUG: userName: ${userName}`);
         })
@@ -337,7 +361,7 @@ function App() {
                     onChange={(e) => setPalmLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Google PaLM 2 with scalable VertexAI Vector Search, Embeddings API via LangChain
+                  use {llmNamePalm}
                 </Typography>
                 <Typography>
                   <Checkbox
@@ -345,7 +369,7 @@ function App() {
                     onChange={(e) => setVertexLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Google PaLM 2 with local ChromaDB via LangChain
+                  use {llmNameVertex}
                 </Typography>
                 <Typography>
                   <Checkbox
@@ -353,7 +377,7 @@ function App() {
                     onChange={(e) => setGoogLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Google Enterprise Search with summarization
+                  use {llmNameGoog}
                 </Typography>
                 <Typography>
                   <Checkbox
@@ -361,7 +385,7 @@ function App() {
                     onChange={(e) => setGptLlm(e.target.checked)}
                     inputProps={{ "aria-label": "controlled" }}
                   />
-                  use Chat GPT 3.5 via Llama-Index (public API hosted by OpenAI)
+                  use {llmNameGpt}
                 </Typography>
                 <Typography height={20}></Typography>
                 <TextField
@@ -420,14 +444,6 @@ function Chat({ messages, addMessage, backendUrl, idToken, promptPrefix }) {
   const [googErrorMessage, setGoogErrorMessage] = useState("");
   const [vertexErrorMessage, setVertexErrorMessage] = useState("");
 
-  // Prefixes for the answers from various LLM engines
-  const llmNameGpt = "Chat GPT";
-  const llmNamePalm = "Google PaLM";
-  const llmNameGoog = "Google GenAI";
-  const llmNameVertex = "Google VertexAI Bison";
-
-  // Which LLM engines to use
-
   const handleChange = (event) => {
     setQuestion(event.target.value);
   };
@@ -437,13 +453,14 @@ function Chat({ messages, addMessage, backendUrl, idToken, promptPrefix }) {
     try {
       errorHandler("");
       isLoading(true);
+      console.info(`Auth ID token before calling backend LLM: ${idToken}`);
       const response = await fetch(url, {
         method: "POST",
         credentials: idToken === fakeIdToken ? "omit" : "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-          Accept: "application/json, text/plain, */*",
+          "Authorization": `Bearer ${idToken}`,
+          "Accept": "application/json, text/plain, */*",
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Credentials": true,
         },
@@ -661,7 +678,7 @@ function Chat({ messages, addMessage, backendUrl, idToken, promptPrefix }) {
             height: "50px",
           }}
         >
-          <Typography variant="body1">Processing request for ChatGPT...</Typography>
+          <Typography variant="body1">Processing request for {llmNameGpt}...</Typography>
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
@@ -674,7 +691,7 @@ function Chat({ messages, addMessage, backendUrl, idToken, promptPrefix }) {
             height: "50px",
           }}
         >
-          <Typography variant="body1">Processing request for Google PaLM...</Typography>
+          <Typography variant="body1">Processing request for {llmNamePalm}...</Typography>
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
@@ -687,7 +704,7 @@ function Chat({ messages, addMessage, backendUrl, idToken, promptPrefix }) {
             height: "50px",
           }}
         >
-          <Typography variant="body1">Processing request for Google Gen AI...</Typography>
+          <Typography variant="body1">Processing request for {llmNameGoog}...</Typography>
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
@@ -700,7 +717,7 @@ function Chat({ messages, addMessage, backendUrl, idToken, promptPrefix }) {
             height: "50px",
           }}
         >
-          <Typography variant="body1">Processing request for Google VertexAX Bison...</Typography>
+          <Typography variant="body1">Processing request for {llmNameVertex}...</Typography>
           <CircularProgress sx={{ marginRight: "8px" }} />
         </Box>
       )}
@@ -756,8 +773,8 @@ function Help() {
       >
         <Typography variant="h3">Help and system information</Typography>
         <Typography height={15}></Typography>
-        <Typography>Client version: 0.20</Typography>
-        <Typography>Software update: August 27, 2023</Typography>
+        <Typography>Client version: 0.21</Typography>
+        <Typography>Software update: September 1, 2023</Typography>
         <Typography>Author: Roman Kharkovski (kharkovski@gmail.com)</Typography>
         <Typography>
           Source code: <a href="https://github.com/Qarik-Group/resume-chatbot">GitHub repo</a>

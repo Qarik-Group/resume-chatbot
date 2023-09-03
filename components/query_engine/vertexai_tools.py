@@ -1,6 +1,6 @@
 # Copyright 2023 Google LLC
 # Copyright 2023 Qarik Group, LLC
-
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,12 +25,10 @@ from typing import List
 # import vertexai
 from google.cloud import aiplatform
 from langchain.chains import RetrievalQA
-from langchain.embeddings import VertexAIEmbeddings
 from langchain.llms import VertexAI
 from langchain.prompts import PromptTemplate
-from pydantic import BaseModel
 from common import solution
-from matching_engine import MatchingEngine
+from matching_engine import MatchingEngine, CustomVertexAIEmbeddings, ME_DIMENSIONS
 from matching_engine_tools import MatchingEngineUtils
 
 from common.log import Logger, log_params, log
@@ -50,12 +48,8 @@ SOURCE_PDF_BUCKET: str = solution.getenv('RESUME_BUCKET_NAME')
 """GCS bucket where source PDF files are stored."""
 ME_EMBEDDING_BUCKET: str = f'matching-engine-embeddings-{PROJECT_ID}'
 """GCS bucket where Matching Engine index and embeddings are stored."""
-ME_DIMENSIONS: int = 768
-"""Vertex PaLM Embedding has maximum 768 dimensions."""
 EMBEDDING_QPM: int = 100
 """Rate limit for calling Google VertexAI embeddings API."""
-EMBEDDING_NUM_BATCH: int = 5
-"""Number of documents to embed in a batch."""
 TEMPERATURE: float = 0.0
 """Temperature for LLM."""
 TOP_P: float = 1.0
@@ -69,43 +63,6 @@ SEARCH_DISTANCE_THRESHOLD = 0.6
 
 
 logger.debug('Vertex AI SDK version: %s', aiplatform.__version__)
-
-
-def _rate_limit(max_per_minute):
-    """Rate limit generator."""
-    period = 60 / max_per_minute
-    while True:
-        before = time.time()
-        yield
-        after = time.time()
-        elapsed = after - before
-        sleep_time = max(0, period - elapsed)
-        if sleep_time > 0:
-            time.sleep(sleep_time)
-
-
-class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
-    """Custom Vertex AI Embeddings class to override embed_documents method."""
-    requests_per_minute: int
-
-    def embed_documents(self, texts: List[str], batch_size: int = EMBEDDING_NUM_BATCH) -> List[List[float]]:
-        """Embeds a list of documents with rate limit."""
-        limiter = _rate_limit(self.requests_per_minute)
-        results = []
-        docs = list(texts)
-
-        while docs:
-            # Working in batches because the API accepts maximum 5
-            # documents per request to get embeddings
-            head, docs = (
-                docs[: batch_size],
-                docs[batch_size:],
-            )
-            chunk = self.client.get_embeddings(head)
-            results.extend(chunk)
-            next(limiter)
-
-        return [r.values for r in results]
 
 
 def _formatter(result):

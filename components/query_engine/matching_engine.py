@@ -1,15 +1,31 @@
+# Copyright 2023 Google LLC
+# Copyright 2023 Qarik Group, LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Vertex Matching Engine implementation of the vector store."""
 from __future__ import annotations
 
+import time
 import logging
 import uuid
 from typing import Any, Iterable, List, Optional, Type
 
 from langchain.docstore.document import Document
-from langchain.embeddings import TensorflowHubEmbeddings
+from langchain.embeddings import TensorflowHubEmbeddings, VertexAIEmbeddings
 from langchain.embeddings.base import Embeddings
 from langchain.vectorstores.base import VectorStore
-
+from pydantic import BaseModel
 from google.cloud import storage
 from google.cloud.aiplatform import MatchingEngineIndex, MatchingEngineIndexEndpoint
 from google.cloud import aiplatform_v1
@@ -18,6 +34,49 @@ import google.auth
 import google.auth.transport.requests
 
 logger = logging.getLogger()
+
+ME_DIMENSIONS: int = 768
+"""Vertex PaLM Embedding has maximum 768 dimensions."""""
+EMBEDDING_NUM_BATCH: int = 5
+"""Number of documents to embed in a batch."""
+
+
+
+def _rate_limit(max_per_minute):
+    """Utility functions for Embeddings API with rate limiting."""
+    period = 60 / max_per_minute
+    while True:
+        before = time.time()
+        yield
+        after = time.time()
+        elapsed = after - before
+        sleep_time = max(0, period - elapsed)
+        if sleep_time > 0:
+            logger.info('.', end='')
+            time.sleep(sleep_time)
+
+class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
+    """Custom Vertex AI Embeddings class to override embed_documents method."""
+    requests_per_minute: int
+
+    def embed_documents(self, texts: List[str], batch_size: int = EMBEDDING_NUM_BATCH) -> List[List[float]]:
+        """Embeds a list of documents with rate limit."""
+        limiter = _rate_limit(self.requests_per_minute)
+        results = []
+        docs = list(texts)
+
+        while docs:
+            # Working in batches because the API accepts maximum 5
+            # documents per request to get embeddings
+            head, docs = (
+                docs[: batch_size],
+                docs[batch_size:],
+            )
+            chunk = self.client.get_embeddings(head)
+            results.extend(chunk)
+            next(limiter)
+
+        return [r.values for r in results]
 
 
 class MatchingEngine(VectorStore):
