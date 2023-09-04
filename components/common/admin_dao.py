@@ -15,6 +15,7 @@
 
 from datetime import datetime
 from typing import Any
+
 from common import firestore_tools, solution
 from common.log import Logger, log_params
 

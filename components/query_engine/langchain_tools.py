@@ -15,18 +15,17 @@
 
 import threading
 from datetime import datetime
-from typing import Any, Tuple
+from typing import Any
 
-import langchain
-from langchain.document_loaders import PyPDFDirectoryLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import VertexAIEmbeddings
-from langchain.chains import RetrievalQA
-from langchain.llms import VertexAI
-from langchain.vectorstores import Chroma
-from common import admin_dao, constants, solution, gcs_tools
+from common import admin_dao, constants, gcs_tools, solution
 from common.cache import cache
 from common.log import Logger, log
+from langchain.chains import RetrievalQA
+from langchain.document_loaders import PyPDFDirectoryLoader
+from langchain.embeddings import VertexAIEmbeddings  # type: ignore
+from langchain.llms import VertexAI  # type: ignore
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import Chroma
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
@@ -49,7 +48,7 @@ TOP_P: float = 0.3
 TOP_K: int = 10
 """Top k for sampling."""
 
-SIMILARITY_SEARCH_K: int = 13
+SIMILARITY_SEARCH_K: int = 11
 """Number of similar documents to return from the index."""
 
 LANGCHAIN_ENGINE: Any = None

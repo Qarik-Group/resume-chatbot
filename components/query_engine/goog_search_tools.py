@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unidecode import unidecode
-from google.cloud import discoveryengine
 from common import solution
 from common.log import Logger, log_params
+from google.cloud import discoveryengine
+from unidecode import unidecode
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')

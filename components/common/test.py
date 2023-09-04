@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+
 from common import solution
 from common.admin_dao import AdminDAO
 from common.log import Logger, log

@@ -13,8 +13,8 @@
 # limitations under the License.
 """Set of utility functions to work with Firestore."""
 
+from humps import camelize  # type:ignore
 from pydantic import BaseModel
-from humps import camelize    # type:ignore
 
 
 def to_camel(string):

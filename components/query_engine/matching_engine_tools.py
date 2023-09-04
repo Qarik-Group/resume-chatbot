@@ -1,7 +1,7 @@
 # Utility functions to create Index and deploy the index to an Endpoint
-from datetime import datetime
-import time
 import logging
+import time
+from datetime import datetime
 
 from google.cloud import aiplatform_v1 as aipv1
 from google.protobuf import struct_pb2

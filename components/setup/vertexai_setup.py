@@ -22,13 +22,14 @@ https://github.com/GoogleCloudPlatform/generative-ai/blob/main/language/use-case
 
 import langchain
 import vertexai
+from common import solution
+from common.log import Logger
 from google.cloud import aiplatform
 from langchain.document_loaders import GCSDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from query_engine.matching_engine import MatchingEngine, CustomVertexAIEmbeddings, ME_DIMENSIONS
+from query_engine.matching_engine import ME_DIMENSIONS, CustomVertexAIEmbeddings, MatchingEngine
 from query_engine.matching_engine_tools import MatchingEngineUtils
-from common import solution
-from common.log import Logger
+
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
 logger.info(f'Vertex AI SDK version: {aiplatform.__version__}')

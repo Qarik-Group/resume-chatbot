@@ -15,9 +15,9 @@
 
 import os
 
-from google.cloud import firestore  # type: ignore
 from common import solution
 from common.log import Logger, log
+from google.cloud import firestore  # type: ignore
 
 logger = Logger(__name__).get_logger()
 

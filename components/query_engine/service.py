@@ -22,9 +22,8 @@ from common.log import Logger, log_params
 from fastapi import Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from query_engine import goog_search_tools
+from query_engine import goog_search_tools, vertexai_tools
 from query_engine.chat_dao import VoteStatistic
-from query_engine import vertexai_tools
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')

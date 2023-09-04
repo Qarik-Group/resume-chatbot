@@ -20,18 +20,17 @@ https://github.com/GoogleCloudPlatform/generative-ai/blob/main/language/use-case
 """
 
 import textwrap
-import time
-from typing import List
+
+from common import solution
+from common.log import Logger
 # import vertexai
 from google.cloud import aiplatform
 from langchain.chains import RetrievalQA
-from langchain.llms import VertexAI
+from langchain.llms import VertexAI  # type: ignore
 from langchain.prompts import PromptTemplate
-from common import solution
-from matching_engine import MatchingEngine, CustomVertexAIEmbeddings, ME_DIMENSIONS
+from matching_engine import CustomVertexAIEmbeddings, MatchingEngine
 from matching_engine_tools import MatchingEngineUtils
 
-from common.log import Logger, log_params, log
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
 

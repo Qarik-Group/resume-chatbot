@@ -29,7 +29,6 @@ import logging
 import os
 import sys
 
-
 _LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
 

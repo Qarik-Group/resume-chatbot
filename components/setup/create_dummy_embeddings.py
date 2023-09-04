@@ -17,6 +17,7 @@
 
 import json
 import uuid
+
 import numpy as np
 from query_engine.matching_engine import ME_DIMENSIONS
 
