@@ -25,8 +25,8 @@ import vertexai
 from google.cloud import aiplatform
 from langchain.document_loaders import GCSDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from query_engine.matching_engine import MatchingEngine, CustomVertexAIEmbeddings
-from query_engine.matching_engine_tools import MatchingEngineUtils, ME_DIMENSIONS
+from query_engine.matching_engine import MatchingEngine, CustomVertexAIEmbeddings, ME_DIMENSIONS
+from query_engine.matching_engine_tools import MatchingEngineUtils
 from common import solution
 from common.log import Logger
 logger = Logger(__name__).get_logger()
