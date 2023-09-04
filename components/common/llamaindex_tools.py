@@ -63,7 +63,7 @@ LOCAL_DEV_DATA_DIR: str = 'dev/tmp'
 def _get_llm(provider: constants.LlmProvider) -> LLMPredictor:
     """Return LLM predictor."""
     if provider == constants.LlmProvider.OPEN_AI:
-        llm = LLMPredictor(llm=OpenAIChat(temperature=constants.TEMPERATURE, model_name=constants.GPT_MODEL))
+        llm = LLMPredictor(llm=OpenAIChat(temperature=constants.TEMPERATURE, model_name=constants.GPT_MODEL))  # type: ignore
     else:
         raise ValueError(f'Unknown LLM provider: {provider}')
     return llm
@@ -211,7 +211,7 @@ def _get_resume_query_engine(provider: constants.LlmProvider, resume_dir: str | 
         query_engine = TransformQueryEngine(query_engine=query_engine,
                                             query_transform=decompose_transform,
                                             transform_metadata={'index_summary': index.index_struct.summary},
-                                            )
+                                            )  # type: ignore
         custom_query_engines[index.index_id] = query_engine
 
     custom_query_engines[graph.root_id] = graph.root_index.as_query_engine(

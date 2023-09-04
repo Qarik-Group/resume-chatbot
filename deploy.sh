@@ -52,3 +52,9 @@ for dir in "${ALL_DEPLOYMENTS[@]}"; do
   log "***** Deployment in [${dir}] *****"
   tail -n 5 "${dir}/dev/deploy.log"
 done
+
+log "***************************************"
+log "Triggering resume indexing process."
+log "***************************************"
+# To trigger indexing of resumes, it is enough to update a single file in the GCS bucket
+gsutil cp "${PROJECT_HOME}/data/Roman Kharkovski resume.pdf" "${RESUME_BUCKET_NAME}/Roman Kharkovski resume.pdf"
