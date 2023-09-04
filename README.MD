@@ -82,6 +82,9 @@ In order to build and deploy this project you need the following:
 - [Create](https://console.cloud.google.com/projectcreate) a Google Cloud Platform (GCP) project with assigned billing
   account.
 
+- Enable Gen App Builder in your project as described in the
+  [documentation](https://cloud.google.com/generative-ai-app-builder/docs/before-you-begin).
+
 - Clone the repo
 
   ```bash
@@ -172,7 +175,49 @@ URL to the page source code:
   ./deploy.sh
   ```
 
-- Open the chatbot web page using url from the deployment step above and interact with the bot.
+- Open the chatbot web page using url from the deployment step above and interact with the bot. At this point all
+  services should work, except for the Google Enterprise Search. To enable Google Enterprise Search, refer to the
+  section below.
+
+## Create Google Enterprise Search Gen AI App
+
+Follow
+[instructions to create Google Gen AI App](https://cloud.google.com/generative-ai-app-builder/docs/try-enterprise-search#create_and_preview_a_search_app_for_unstructured_data_from)
+using the section of the tutorial titled "Create and preview a search app for unstructured data from Cloud Storage".
+
+When creating a datasource, point it to the GCS bucket with original PDF resumes, for example
+`resume-originals-${PROJECT_ID}`. The import of data may take significant time - possibly as long as an hour.
+
+While data import is in progress, open the [goog_search_tools.py](./components/query_engine/goog_search_tools.py) file
+and update the value of the variables according to your Google Enterprise Search App you just created, for example, as
+shown below:
+
+```python
+LOCATION = 'global'
+DATA_STORE_ID = 'resume-sources_1693859982932'
+SERVING_CONFIG_ID = 'default_config'
+```
+
+You can find the Data Store ID in the GCP Console:
+
+![Data Store ID](/doc/images/data_store_id.png)
+
+Redeploy the query service:
+
+```bash
+cd ${PROJECT_HOME}/components/query_engine
+./deploy.sh
+```
+
+Whenever the Enterprise Search data import is complete, the query service will start using it as one of the LLM
+backends. You can monitor the progress of data import by opening the console and checking the Data status under your app
+in Gen AI builder:
+
+![Data source import status](doc/images/ent_search_data_import.png)
+
+Make sure to enable `Advanced LLM features` in the advanced application configuration:
+
+![Advanced LLM features](doc/images/llm_features_toggle.png)
 
 ## Deployment to GCP with IAP (advanced and more secure)
 

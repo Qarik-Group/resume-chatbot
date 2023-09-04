@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Vertex Matching Engine implementation of the vector store."""
+
 from __future__ import annotations
 
 import json
