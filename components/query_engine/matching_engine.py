@@ -16,22 +16,23 @@
 """Vertex Matching Engine implementation of the vector store."""
 from __future__ import annotations
 
-import time
+import json
 import logging
+import time
 import uuid
 from typing import Any, Iterable, List, Optional, Type
 
+import google.auth
+import google.auth.transport.requests
+import requests
+from google.cloud import aiplatform_v1, storage
+from google.cloud.aiplatform import MatchingEngineIndex, MatchingEngineIndexEndpoint
+from google.oauth2.service_account import Credentials
 from langchain.docstore.document import Document
 from langchain.embeddings import TensorflowHubEmbeddings, VertexAIEmbeddings
 from langchain.embeddings.base import Embeddings
 from langchain.vectorstores.base import VectorStore
 from pydantic import BaseModel
-from google.cloud import storage
-from google.cloud.aiplatform import MatchingEngineIndex, MatchingEngineIndexEndpoint
-from google.cloud import aiplatform_v1
-from google.oauth2.service_account import Credentials
-import google.auth
-import google.auth.transport.requests
 
 logger = logging.getLogger()
 
@@ -39,7 +40,6 @@ ME_DIMENSIONS: int = 768
 """Vertex PaLM Embedding has maximum 768 dimensions."""""
 EMBEDDING_NUM_BATCH: int = 5
 """Number of documents to embed in a batch."""
-
 
 
 def _rate_limit(max_per_minute):
@@ -52,8 +52,8 @@ def _rate_limit(max_per_minute):
         elapsed = after - before
         sleep_time = max(0, period - elapsed)
         if sleep_time > 0:
-            logger.info('.', end='')
             time.sleep(sleep_time)
+
 
 class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
     """Custom Vertex AI Embeddings class to override embed_documents method."""
@@ -171,12 +171,12 @@ class MatchingEngine(VectorStore):
 
         # Streaming index update
         for idx, (embedding, text, metadata) in enumerate(
-            zip(embeddings, texts, metadatas)
+            zip(embeddings, texts, metadatas)  # type: ignore
         ):
             id = uuid.uuid4()
             ids.append(id)
             self._upload_to_gcs(text, f'documents/{id}')
-            metadatas[idx]
+            metadatas[idx]  # type: ignore
             insert_datapoints_payload.append(
                 aiplatform_v1.IndexDatapoint(
                     datapoint_id=str(id),
@@ -199,7 +199,7 @@ class MatchingEngine(VectorStore):
         logger.debug('Updated index with new configuration.')
         logger.info(f'Indexed {len(ids)} documents to Matching Engine.')
 
-        return ids
+        return ids  # type: ignore
 
     def _upload_to_gcs(self, data: str, gcs_location: str) -> None:
         """Uploads data to gcs_location.
@@ -219,9 +219,6 @@ class MatchingEngine(VectorStore):
         index_endpoint: MatchingEngineIndexEndpoint,
     ) -> str:
         """Get matches from matching engine given a vector query Uses public endpoint."""
-        import requests
-        import json
-
         request_data = {
             'deployed_index_id': index_endpoint.deployed_indexes[0].id,
             'return_full_datapoint': True,
@@ -287,7 +284,7 @@ class MatchingEngine(VectorStore):
         results = []
 
         # I'm only getting the first one because queries receives an array
-        # and the similarity_search method only recevies one query. This
+        # and the similarity_search method only receives one query. This
         # means that the match method will always return an array with only
         # one element.
         for doc in response[0]['neighbors']:

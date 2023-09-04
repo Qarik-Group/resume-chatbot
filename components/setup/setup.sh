@@ -38,5 +38,6 @@ python3 create_dummy_embeddings.py
 log "Copy dummy embeddings to the GCS bucket..."
 gsutil cp "${TMP}/dummy_embeddings.json" "gs://${ME_EMBEDDING_BUCKET}/init_index/dummy_embeddings.json"
 
-log "Creating VertexAI Embeddings engine and other needed infra..."
+log "Creating VertexAI Embeddings Index - this may take ap to an hour...."
+log "If you accidentally close this shell, just rerun the script again - it is idempotent." "${ECHO_WARNING}"
 python3 vertexai_setup.py
