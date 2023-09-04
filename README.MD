@@ -140,7 +140,21 @@ This assumes that the initial setup was done using the `ENABLE_IAP=false` in the
   ./deploy.sh
   ```
 
-Done!
+Done! Now lets test the application:
+
+- Open GCP Console, navigate to Cloud Run Page in your project.
+
+- Open the details of the service `skillsbot-backend`. Copy the URL of the service into the clipboard (see image below).
+
+![Service details in Cloud Console](./doc/images/backend_service_details.png)
+
+- Open the details of the service `skillsbot-ui`. Open the service URL in a new browser tab to load the UI.
+
+- In the Resume Chatbot UI, click on the `Config` item in the menu. In the field `Backend REST API URL` insert the URL
+  of the `skillsbot-backend` service you copied into the clipboard earlier.
+
+- Check all resumes available for queries by opening `Resumes` menu, or start asking questions about people in the
+  `Chat` menu of the UI.
 
 Optional - if you do not want to manually put a backend URL every time you open UI, you can permanently add backend UI
 URL to the page source code:
