@@ -129,51 +129,6 @@ In order to build and deploy this project you need the following:
   ./setup.sh
   ```
 
-## Test query engine locally
-
-The experimentation with the queries can be done on a local machine:
-
-- Run the set of pre-built tests against the query engine, or use it in the interactive mode:
-
-  ```bash
-  cd components/query_engine/dev
-  ./test.sh
-  ```
-
-![Command line test for queries - screenshot](./doc/images/cmd-line-test-screenshot.png)
-
-## Development
-
-The development can be done on a local machine (everything, except for the remote APIs), which can be your physical
-machine, or a cloud based environment. You can run local Firestore emulator, the query engine server as the local Python
-process (or as a local container), and run UI in a local NodeJS process (or a local container):
-
-- In your terminal start the Firestore emulator:
-
-  ```bash
-  cd "${PROJECT_HOME}/components/query_engine/dev"
-  ./firebase_emulator.sh
-  ```
-
-- In another terminal window run the local instance of the query engine:
-
-  ```bash
-  cd "${PROJECT_HOME}"
-  source .venv/bin/activate
-  cd components/query_engine/dev
-  ./run_local.sh
-  ```
-
-- In another terminal run the local instance of the client:
-
-  ```bash
-  cd "${PROJECT_HOME}/components/client/dev"
-  ./run_local.sh
-  ```
-
-- Once you open the local client UI in your browser, navigate to the "Settings" menu option and update the "Backend URL"
-  to point to your local server: [http://127.0.0.1:8000](http://127.0.0.1:8000).
-
 ## Deployment to GCP without IAP
 
 This assumes that the initial setup was done using the `ENABLE_IAP=false` in the .env file at the root directory.
@@ -196,7 +151,7 @@ URL to the page source code:
   const serverBackendUrl = "https://<put-your-QUERY-ENGINE-CloudRun-URL-here>.a.run.app";
   ```
 
-- Build and deploy the UI service to Cloud Run:
+- Re-build and deploy the updated UI service:
 
   ```bash
   cd components/client/dev
@@ -207,10 +162,20 @@ URL to the page source code:
 
 ## Deployment to GCP with IAP (advanced and more secure)
 
-- Build and deploy all components:
+- Update the `.env` file in the project home and set `ENABLE_IAP=true`.
+
+- Prepare IAP related artifacts, including certificates, etc. Because of the certificate, it may take about an hour to
+  propagate the proper data across GCP for IAP to work. This is only a one time step. Subsequent deployments in IAP
+  enabled configuration are no different than a direct Cloud Run deployment.
 
   ```bash
   cd $PROJECT_HOME
+  ./setup.sh
+  ```
+
+- Rebuild and redeploy all components:
+
+  ```bash
   ./deploy.sh
   ```
 
@@ -259,8 +224,57 @@ URL to the page source code:
 
 - Open the chatbot web page using url [https://<UI_IP_ADDRESS>.nip.io] and interact with the bot.
 
+## Test query engine locally
+
+The experimentation with the queries can be done on a local machine:
+
+- Run the set of pre-built tests against the query engine, or use it in the interactive mode:
+
+  ```bash
+  cd components/query_engine/dev
+  ./test.sh
+  ```
+
+![Command line test for queries - screenshot](./doc/images/cmd-line-test-screenshot.png)
+
+## Development
+
+The development can be done on a local machine (everything, except for the remote APIs), which can be your physical
+machine, or a cloud based environment. You can run local Firestore emulator, the query engine server as the local Python
+process (or as a local container), and run UI in a local NodeJS process (or a local container):
+
+- In your terminal start the Firestore emulator:
+
+  ```bash
+  cd "${PROJECT_HOME}/components/query_engine/dev"
+  ./firebase_emulator.sh
+  ```
+
+- In another terminal window run the local instance of the query engine:
+
+  ```bash
+  cd "${PROJECT_HOME}"
+  source .venv/bin/activate
+  cd components/query_engine/dev
+  ./run_local.sh
+  ```
+
+- In another terminal run the local instance of the client:
+
+  ```bash
+  cd "${PROJECT_HOME}/components/client/dev"
+  ./run_local.sh
+  ```
+
+- Once you open the local client UI in your browser, navigate to the "Settings" menu option and update the "Backend URL"
+  to point to your local server: [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
 # Credits
 
-Part of this project related to LlamaIndex was made possible and based on top of the wonderful work by LlamaIndex and
-its
-[tutorials](https://github.com/jerryjliu/llama_index/blob/main/docs/end_to_end_tutorials/question_and_answer/unified_query.md).
+Various parts of this project were derived from Open Source tutorials an blog articles:
+
+- Google Vertex Ai [tutorials]() and
+  [notebooks](https://github.com/GoogleCloudPlatform/generative-ai/blob/main/language/use-cases/document-qa/question_answering_documents_langchain_matching_engine.ipynb)
+- LlamaIndex
+  [tutorials](https://github.com/jerryjliu/llama_index/blob/main/docs/end_to_end_tutorials/question_and_answer/unified_query.md).
+- LangChain [tutorials]()
