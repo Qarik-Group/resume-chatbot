@@ -22,25 +22,25 @@ source "./.env"
 source "./utils.sh"
 
 print_header "Configuring Resume Chatbot"
-# setup_local_os
-# authenticate_gcp
-# install_firestore_emulator
-# install_python_virtual_env
-# enable_apis
-# create_registry
-# create_firestore_instance
-# create_resume_bucket
-# create_embeddings_bucket
+setup_local_os
+authenticate_gcp
+install_firestore_emulator
+install_python_virtual_env
+enable_apis
+create_registry
+create_firestore_instance
+create_resume_bucket
+create_llamaindex_embeddings_bucket
+setup_vertexai
 define_chat_svc_sa
-# define_resume_svc_sa
-# create_sa "${UI_SVC_NAME}"
-# setup_resume_updates
-# create_eventarc_chat_channel
-# setup_vertexai
+define_resume_svc_sa
+create_sa "${UI_SVC_NAME}"
+setup_resume_updates
+create_eventarc_chat_channel
 
-# if [[ "${ENABLE_IAP}" == "true" ]]; then
-#   enable_oauth
-#   reserve_ip
-#   create_ssl_certificate
-# fi
-# print_footer
+if [[ "${ENABLE_IAP}" == "true" ]]; then
+  enable_oauth
+  reserve_ip
+  create_ssl_certificate
+fi
+print_footer

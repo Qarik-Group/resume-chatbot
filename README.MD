@@ -1,4 +1,6 @@
-<!-- Copyright 2023 Qarik Group, LLC
+<!--
+Copyright 2023 Google LLC
+Copyright 2023 Qarik Group, LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -77,7 +79,11 @@ In order to build and deploy this project you need the following:
 
 ## Setup
 
-- [Create](https://console.cloud.google.com/projectcreate) a Google Cloud Platform (GCP) project.
+- [Create](https://console.cloud.google.com/projectcreate) a Google Cloud Platform (GCP) project with assigned billing
+  account.
+
+- Enable Gen App Builder in your project as described in the
+  [documentation](https://cloud.google.com/generative-ai-app-builder/docs/before-you-begin).
 
 - Clone the repo
 
@@ -89,17 +95,35 @@ In order to build and deploy this project you need the following:
 - Copy template environment file:
 
   ```bash
-  cp "${PROJECT_HOME}/.env.example" "${PROJECT_HOME}/.env"
+  cd "${PROJECT_HOME}"
+  cp .env.example .env
   ```
 
 - Update the '.env' file with your own values, including the
-  [OpenAI API Key](https://platform.openai.com/account/api-keys). Also check the ENABLE_IAP setting and set it to "true"
-  if you want to enable IAP in front of your Cloud Run instances. However be aware that the initial setup will take more
-  than an hour because it takes that long to propagate the SSL certificate settings.
+  [OpenAI API Key](https://platform.openai.com/account/api-keys) and any other relevant information for your
+  organization or project.
 
-- Add any number of PDF files with resumes to the [data](data/) folder. Files shall be named using
-  'Firstname Lastname.pdf' format with space separating first and last name. Optionally you can append 'Resume' after
-  last name. For example: 'Roman Kharkovski Resume.pdf'.
+  - Check the `ENABLE_IAP` setting and set it to `true` if you want to enable IAP in front of your Cloud Run instances.
+    However aware that the initial setup will take more than an hour because it takes that long to propagate the SSL
+    certificate settings. I recommend setting `ENABLE_EAP` to `false` for the simple development and experimentation.
+
+- Add any number of PDF files with resumes to the [data](data) folder. Files shall be named using 'Firstname
+  Lastname.pdf' format with space separating first and last name. Optionally you can append 'Resume' after last name.
+  For example: 'Roman Kharkovski Resume.pdf'.
+
+- Create new virtual environment (if VSCode prompts you to switch to this new virtual environment, accept it). You may
+  decide to have a separate Virtual Environment for each service, or have one common for all services:
+
+  ```bash
+  cd "${PROJECT_HOME}"
+  python3 -m venv .venv
+  ```
+
+- Activate the Python virtual environment in your terminal (only do it once in a terminal session):
+
+  ```bash
+  source "${PROJECT_HOME}/.venv/bin/activate"
+  ```
 
 - Complete the setup:
 
@@ -107,66 +131,6 @@ In order to build and deploy this project you need the following:
   cd "${PROJECT_HOME}"
   ./setup.sh
   ```
-
-## Test query engine locally
-
-The experimentation with the queries can be done on a local machine:
-
-- Create new virtual environment (if VSCode prompts you to switch to this new virtual environment, accept it). You may
-    decide to have a separate Virtual Environment for each service, or have one common for all services:
-
-    ```bash
-    cd "${PROJECT_HOME}"
-    python3 -m venv .venv
-    ```
-
-- Activate the Python virtual environment in your terminal (only do it once in a terminal session):
-
-  ```bash
-  cd "${PROJECT_HOME}"
-  source .venv/bin/activate
-  ```
-
-- Run the set of pre-built tests against the query engine, or use it in the interactive mode:
-
-  ```bash
-  cd components/query_engine/dev
-  ./test.sh
-  ```
-
-![Command line test for queries - screenshot](./doc/images/cmd-line-test-screenshot.png)
-
-## Development
-
-The development can be done on a local machine (everything, except for the remote APIs), which can be your physical
-machine, or a cloud based environment. You can run local Firestore emulator, the query engine server as the local Python
-process (or as a local container), and run UI in a local NodeJS process (or a local container):
-
-- In your terminal start the Firestore emulator:
-
-  ```bash
-  cd "${PROJECT_HOME}/components/query_engine/dev"
-  ./firebase_emulator.sh
-  ```
-
-- In another terminal window run the local instance of the query engine:
-
-  ```bash
-  cd "${PROJECT_HOME}"
-  source .venv/bin/activate
-  cd components/query_engine/dev
-  ./run_local.sh
-  ```
-
-- In another terminal run the local instance of the client:
-
-  ```bash
-  cd "${PROJECT_HOME}/components/client/dev"
-  ./run_local.sh
-  ```
-
-- Once you open the local client UI in your browser, navigate to the "Settings" menu option and update the "Backend URL"
-  to point to your local server: [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ## Deployment to GCP without IAP
 
@@ -179,7 +143,21 @@ This assumes that the initial setup was done using the `ENABLE_IAP=false` in the
   ./deploy.sh
   ```
 
-Done!
+Done! Now lets test the application:
+
+- Open GCP Console, navigate to Cloud Run Page in your project.
+
+- Open the details of the service `skillsbot-backend`. Copy the URL of the service into the clipboard (see image below).
+
+![Service details in Cloud Console](./doc/images/backend_service_details.png)
+
+- Open the details of the service `skillsbot-ui`. Open the service URL in a new browser tab to load the UI.
+
+- In the Resume Chatbot UI, click on the `Config` item in the menu. In the field `Backend REST API URL` insert the URL
+  of the `skillsbot-backend` service you copied into the clipboard earlier.
+
+- Check all resumes available for queries by opening `Resumes` menu, or start asking questions about people in the
+  `Chat` menu of the UI.
 
 Optional - if you do not want to manually put a backend URL every time you open UI, you can permanently add backend UI
 URL to the page source code:
@@ -190,21 +168,73 @@ URL to the page source code:
   const serverBackendUrl = "https://<put-your-QUERY-ENGINE-CloudRun-URL-here>.a.run.app";
   ```
 
-- Build and deploy the UI service to Cloud Run:
+- Re-build and deploy the updated UI service:
 
   ```bash
   cd components/client/dev
   ./deploy.sh
   ```
 
-- Open the chatbot web page using url from the deployment step above and interact with the bot.
+- Open the chatbot web page using url from the deployment step above and interact with the bot. At this point all
+  services should work, except for the Google Enterprise Search. To enable Google Enterprise Search, refer to the
+  section below.
+
+## Create Google Enterprise Search Gen AI App
+
+Follow
+[instructions to create Google Gen AI App](https://cloud.google.com/generative-ai-app-builder/docs/try-enterprise-search#create_and_preview_a_search_app_for_unstructured_data_from)
+using the section of the tutorial titled "Create and preview a search app for unstructured data from Cloud Storage".
+
+When creating a datasource, point it to the GCS bucket with original PDF resumes, for example
+`resume-originals-${PROJECT_ID}`. The import of data may take significant time - possibly as long as an hour.
+
+While data import is in progress, open the [goog_search_tools.py](./components/query_engine/goog_search_tools.py) file
+and update the value of the variables according to your Google Enterprise Search App you just created, for example, as
+shown below:
+
+```python
+LOCATION = 'global'
+DATA_STORE_ID = 'resume-sources_1693859982932'
+SERVING_CONFIG_ID = 'default_config'
+```
+
+You can find the Data Store ID in the GCP Console:
+
+![Data Store ID](/doc/images/data_store_id.png)
+
+Redeploy the query service:
+
+```bash
+cd ${PROJECT_HOME}/components/query_engine
+./deploy.sh
+```
+
+Whenever the Enterprise Search data import is complete, the query service will start using it as one of the LLM
+backends. You can monitor the progress of data import by opening the console and checking the Data status under your app
+in Gen AI builder:
+
+![Data source import status](doc/images/ent_search_data_import.png)
+
+Make sure to enable `Advanced LLM features` in the advanced application configuration:
+
+![Advanced LLM features](doc/images/llm_features_toggle.png)
 
 ## Deployment to GCP with IAP (advanced and more secure)
 
-- Build and deploy all components:
+- Update the `.env` file in the project home and set `ENABLE_IAP=true`.
+
+- Prepare IAP related artifacts, including certificates, etc. Because of the certificate, it may take about an hour to
+  propagate the proper data across GCP for IAP to work. This is only a one time step. Subsequent deployments in IAP
+  enabled configuration are no different than a direct Cloud Run deployment.
 
   ```bash
   cd $PROJECT_HOME
+  ./setup.sh
+  ```
+
+- Rebuild and redeploy all components:
+
+  ```bash
   ./deploy.sh
   ```
 
@@ -253,8 +283,57 @@ URL to the page source code:
 
 - Open the chatbot web page using url [https://<UI_IP_ADDRESS>.nip.io] and interact with the bot.
 
+## Test query engine locally
+
+The experimentation with the queries can be done on a local machine:
+
+- Run the set of pre-built tests against the query engine, or use it in the interactive mode:
+
+  ```bash
+  cd components/query_engine/dev
+  ./test.sh
+  ```
+
+![Command line test for queries - screenshot](./doc/images/cmd-line-test-screenshot.png)
+
+## Development
+
+The development can be done on a local machine (everything, except for the remote APIs), which can be your physical
+machine, or a cloud based environment. You can run local Firestore emulator, the query engine server as the local Python
+process (or as a local container), and run UI in a local NodeJS process (or a local container):
+
+- In your terminal start the Firestore emulator:
+
+  ```bash
+  cd "${PROJECT_HOME}/components/query_engine/dev"
+  ./firebase_emulator.sh
+  ```
+
+- In another terminal window run the local instance of the query engine:
+
+  ```bash
+  cd "${PROJECT_HOME}"
+  source .venv/bin/activate
+  cd components/query_engine/dev
+  ./run_local.sh
+  ```
+
+- In another terminal run the local instance of the client:
+
+  ```bash
+  cd "${PROJECT_HOME}/components/client/dev"
+  ./run_local.sh
+  ```
+
+- Once you open the local client UI in your browser, navigate to the "Settings" menu option and update the "Backend URL"
+  to point to your local server: [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
 # Credits
 
-Part of this project related to LlamaIndex was made possible and based on top of the wonderful work by LlamaIndex and
-its
-[tutorials](https://github.com/jerryjliu/llama_index/blob/main/docs/end_to_end_tutorials/question_and_answer/unified_query.md).
+Various parts of this project were derived from Open Source tutorials an blog articles:
+
+- Google Vertex Ai [tutorials]() and
+  [notebooks](https://github.com/GoogleCloudPlatform/generative-ai/blob/main/language/use-cases/document-qa/question_answering_documents_langchain_matching_engine.ipynb)
+- LlamaIndex
+  [tutorials](https://github.com/jerryjliu/llama_index/blob/main/docs/end_to_end_tutorials/question_and_answer/unified_query.md).
+- LangChain [tutorials]()

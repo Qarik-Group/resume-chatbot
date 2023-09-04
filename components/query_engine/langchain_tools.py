@@ -11,25 +11,46 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Main API service that handles REST API calls to LLM and is run on server."""
 
 import threading
 from datetime import datetime
-from typing import Any, Tuple
+from typing import Any
 
-import langchain
-from langchain.document_loaders import PyPDFDirectoryLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import VertexAIEmbeddings
-from langchain.chains import RetrievalQA
-from langchain.llms import VertexAI
-from langchain.vectorstores import Chroma
-from common import admin_dao, constants, solution, gcs_tools
+from common import admin_dao, constants, gcs_tools, solution
 from common.cache import cache
 from common.log import Logger, log
+from langchain.chains import RetrievalQA
+from langchain.document_loaders import PyPDFDirectoryLoader
+from langchain.embeddings import VertexAIEmbeddings  # type: ignore
+from langchain.llms import VertexAI  # type: ignore
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import Chroma
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
+
+CHUNK_SIZE: int = 2500
+"""Number of characters to split the resume into for processing."""
+
+CHUNK_OVERLAP: int = 0
+"""Number of characters to overlap between chunks."""
+
+MAX_OUTPUT_TOKENS: int = 1024
+"""Maximum number of tokens to generate."""
+
+TEMPERATURE: float = 0.0
+"""Temperature for sampling."""
+
+TOP_P: float = 0.3
+"""Top p for sampling."""
+
+TOP_K: int = 10
+"""Top k for sampling."""
+
+SIMILARITY_SEARCH_K: int = 11
+"""Number of similar documents to return from the index."""
 
 LANGCHAIN_ENGINE: Any = None
 """Langchain engine singleton that is used to answer questions."""
@@ -67,7 +88,7 @@ def _create_langchain_client():
     documents = loader.load()
 
     # split the documents into chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
     docs = text_splitter.split_documents(documents)
     logger.info(f'# of documents created from source PDFs = {len(docs)}')
 
@@ -78,14 +99,14 @@ def _create_langchain_client():
     db = Chroma.from_documents(documents=docs, embedding=embeddings)
 
     # Expose index to the retriever
-    retriever = db.as_retriever(search_type='similarity', search_kwargs={'k': 15})
+    retriever = db.as_retriever(search_type='similarity', search_kwargs={'k': SIMILARITY_SEARCH_K})
 
     # LLM model
     llm = VertexAI(model_name=constants.GOOGLE_PALM_MODEL,
-                   max_output_tokens=1024,
-                   temperature=0.0,
-                   top_p=0.3,
-                   top_k=10,
+                   max_output_tokens=MAX_OUTPUT_TOKENS,
+                   temperature=TEMPERATURE,
+                   top_p=TOP_P,
+                   top_k=TOP_K,
                    verbose=True)
 
     # Create chain to answer questions
@@ -101,10 +122,7 @@ def _create_langchain_client():
 @cache
 @log
 def _refresh_chroma_index() -> None:
-    """Refresh the index of resumes from the database using Chroma Vector DB.
-
-    Returns retrieval engine client.
-    """
+    """Refresh the index of resumes from the database using Chroma Vector DB. Returns retrieval engine client."""
     global CHROMA_LOCK
     global LAST_LOCAL_INDEX_UPDATE
 
@@ -129,8 +147,6 @@ def _refresh_chroma_index() -> None:
                     LANGCHAIN_ENGINE is None or \
                     LAST_LOCAL_INDEX_UPDATE < last_resume_refresh:
                 _create_langchain_client()
-
-# --------------------------------
 
 
 @log

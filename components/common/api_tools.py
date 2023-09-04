@@ -16,10 +16,10 @@
 from typing import Any, Callable
 
 import fastapi
-from fastapi import HTTPException, Request, Response
-from fastapi.routing import APIRoute
 from common import solution
 from common.log import Logger
+from fastapi import HTTPException, Request, Response
+from fastapi.routing import APIRoute
 
 logger = Logger(__name__).get_logger()
 

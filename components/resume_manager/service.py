@@ -14,7 +14,7 @@
 """Main API service that handles REST API calls to LLM and is run on server."""
 
 import fastapi
-from common import api_tools, constants, gcs_tools, llamaindex_tools, solution, admin_dao
+from common import admin_dao, api_tools, constants, gcs_tools, llamaindex_tools, solution
 from common.log import Logger, log_params
 
 logger = Logger(__name__).get_logger()
@@ -23,7 +23,6 @@ logger.info('Initializing...')
 
 INDEX_BUCKET: str = solution.getenv('EMBEDDINGS_BUCKET_NAME')
 RESUME_DIR: str = 'tmp'
-INDEX_DIR: str = f'{RESUME_DIR}/embeddings'
 
 app = api_tools.ServiceAPI(title='Resume PDF Manager', description='Eventarc handler.')
 
@@ -31,14 +30,16 @@ app = api_tools.ServiceAPI(title='Resume PDF Manager', description='Eventarc han
 app.router.route_class = api_tools.DebugHeaders
 
 # TODO - need to be able to handle many concurrent deletes or updates to avoid concurrent generation of embeddings
+
+
 @app.post('/resumes', name='Handle Eventarc events.')
 @log_params
 def update_embeddings(event_data: dict = fastapi.Body()) -> dict:
     """Handle resume updates in GCS bucket and generate embeddings."""
     gcs_tools.download(bucket_name=event_data['bucket'], local_dir=RESUME_DIR)
     # TODO - need to generate proper embeddings for each provider, not hard coded
-    llamaindex_tools.generate_embeddings(resume_dir=RESUME_DIR, index_dir=INDEX_DIR, provider=constants.LlmProvider.OPEN_AI)
-    gcs_tools.upload(bucket_name=INDEX_BUCKET, local_dir=INDEX_DIR)
+    llamaindex_tools.generate_embeddings(resume_dir=RESUME_DIR, provider=constants.LlmProvider.OPEN_AI)
+    gcs_tools.upload(bucket_name=INDEX_BUCKET, local_dir=llamaindex_tools.LLAMA_INDEX_DIR)
     admin_dao.AdminDAO().touch_resumes(timestamp=solution.now())
     return {'status': 'ok'}
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# Copyright 2023 Google LLC
 # Copyright 2023 Qarik Group, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -643,7 +644,7 @@ create_resume_bucket() {
 #############################################
 # Create a GCS bucket for storing processed embeddings
 #############################################
-create_embeddings_bucket() {
+create_llamaindex_embeddings_bucket() {
   if ! gsutil ls "gs://${EMBEDDINGS_BUCKET_NAME}" &>/dev/null; then
     log "Creating GCS bucket for resume storage..."
     gsutil mb -p "${PROJECT_ID}" -c regional -l "${REGION}" "gs://${EMBEDDINGS_BUCKET_NAME}"
@@ -663,20 +664,6 @@ create_eventarc_chat_channel() {
   fi
   log "Creating Eventarc channel..."
   gcloud eventarc channels create "${CHAT_CHANNEL}" --location "${REGION}"
-}
-
-#############################################
-# Setup needed for Google VErtexAI
-#############################################
-setup_vertexai() {
-  if ! gsutil ls "gs://${ME_EMBEDDING_BUCKET}" &>/dev/null; then
-    log "Creating GCS bucket [${ME_EMBEDDING_BUCKET}]..."
-    gsutil mb -p "${PROJECT_ID}" -c regional -l "${REGION}" "gs://${ME_EMBEDDING_BUCKET}"
-  else
-    log "GCS bucket [${ME_EMBEDDING_BUCKET}] already exists. Skipping..."
-  fi
-
-  gsutil cp components/vertex_test/dummy_embeddings.json "gs://${ME_EMBEDDING_BUCKET}/init_index/dummy_embeddings.json"
 }
 
 #############################################
@@ -700,4 +687,13 @@ setup_resume_updates() {
   gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
     --member "serviceAccount:${SERVICE_ACCOUNT}" \
     --role roles/pubsub.publisher
+}
+
+#############################################
+# Setup needed for Google VertexAI
+#############################################
+setup_vertexai() {
+  pushd components/setup || die
+  ./setup.sh
+  popd || die
 }

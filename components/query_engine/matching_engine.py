@@ -1,23 +1,83 @@
+# Copyright 2023 Google LLC
+# Copyright 2023 Qarik Group, LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Vertex Matching Engine implementation of the vector store."""
+
 from __future__ import annotations
 
+import json
 import logging
+import time
 import uuid
 from typing import Any, Iterable, List, Optional, Type
 
-from langchain.docstore.document import Document
-from langchain.embeddings import TensorflowHubEmbeddings
-from langchain.embeddings.base import Embeddings
-from langchain.vectorstores.base import VectorStore
-
-from google.cloud import storage
-from google.cloud.aiplatform import MatchingEngineIndex, MatchingEngineIndexEndpoint
-from google.cloud import aiplatform_v1
-from google.oauth2.service_account import Credentials
 import google.auth
 import google.auth.transport.requests
+import requests
+from google.cloud import aiplatform_v1, storage
+from google.cloud.aiplatform import MatchingEngineIndex, MatchingEngineIndexEndpoint
+from google.oauth2.service_account import Credentials
+from langchain.docstore.document import Document
+from langchain.embeddings import TensorflowHubEmbeddings, VertexAIEmbeddings
+from langchain.embeddings.base import Embeddings
+from langchain.vectorstores.base import VectorStore
+from pydantic import BaseModel
 
 logger = logging.getLogger()
+
+ME_DIMENSIONS: int = 768
+"""Vertex PaLM Embedding has maximum 768 dimensions."""""
+EMBEDDING_NUM_BATCH: int = 5
+"""Number of documents to embed in a batch."""
+
+
+def _rate_limit(max_per_minute):
+    """Utility functions for Embeddings API with rate limiting."""
+    period = 60 / max_per_minute
+    while True:
+        before = time.time()
+        yield
+        after = time.time()
+        elapsed = after - before
+        sleep_time = max(0, period - elapsed)
+        if sleep_time > 0:
+            time.sleep(sleep_time)
+
+
+class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
+    """Custom Vertex AI Embeddings class to override embed_documents method."""
+    requests_per_minute: int
+
+    def embed_documents(self, texts: List[str], batch_size: int = EMBEDDING_NUM_BATCH) -> List[List[float]]:
+        """Embeds a list of documents with rate limit."""
+        limiter = _rate_limit(self.requests_per_minute)
+        results = []
+        docs = list(texts)
+
+        while docs:
+            # Working in batches because the API accepts maximum 5
+            # documents per request to get embeddings
+            head, docs = (
+                docs[: batch_size],
+                docs[batch_size:],
+            )
+            chunk = self.client.get_embeddings(head)
+            results.extend(chunk)
+            next(limiter)
+
+        return [r.values for r in results]
 
 
 class MatchingEngine(VectorStore):
@@ -112,12 +172,12 @@ class MatchingEngine(VectorStore):
 
         # Streaming index update
         for idx, (embedding, text, metadata) in enumerate(
-            zip(embeddings, texts, metadatas)
+            zip(embeddings, texts, metadatas)  # type: ignore
         ):
             id = uuid.uuid4()
             ids.append(id)
             self._upload_to_gcs(text, f'documents/{id}')
-            metadatas[idx]
+            metadatas[idx]  # type: ignore
             insert_datapoints_payload.append(
                 aiplatform_v1.IndexDatapoint(
                     datapoint_id=str(id),
@@ -140,7 +200,7 @@ class MatchingEngine(VectorStore):
         logger.debug('Updated index with new configuration.')
         logger.info(f'Indexed {len(ids)} documents to Matching Engine.')
 
-        return ids
+        return ids  # type: ignore
 
     def _upload_to_gcs(self, data: str, gcs_location: str) -> None:
         """Uploads data to gcs_location.
@@ -160,9 +220,6 @@ class MatchingEngine(VectorStore):
         index_endpoint: MatchingEngineIndexEndpoint,
     ) -> str:
         """Get matches from matching engine given a vector query Uses public endpoint."""
-        import requests
-        import json
-
         request_data = {
             'deployed_index_id': index_endpoint.deployed_indexes[0].id,
             'return_full_datapoint': True,
@@ -228,7 +285,7 @@ class MatchingEngine(VectorStore):
         results = []
 
         # I'm only getting the first one because queries receives an array
-        # and the similarity_search method only recevies one query. This
+        # and the similarity_search method only receives one query. This
         # means that the match method will always return an array with only
         # one element.
         for doc in response[0]['neighbors']:

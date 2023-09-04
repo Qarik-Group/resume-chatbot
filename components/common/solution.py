@@ -14,6 +14,7 @@
 """Project wide settings and constants."""
 
 from datetime import datetime
+
 from common import constants
 from common.cache import cache, getenv_no_cache
 

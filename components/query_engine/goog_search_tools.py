@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unidecode import unidecode
-from google.cloud import discoveryengine
 from common import solution
 from common.log import Logger, log_params
+from google.cloud import discoveryengine
+from unidecode import unidecode  # type: ignore
 
 logger = Logger(__name__).get_logger()
 logger.info('Initializing...')
 
 LOCATION = 'global'
-SEARCH_ENGINE_ID = 'skills-search_1688081193007'
+DATA_STORE_ID = 'skills-search_1688081193007'
 SERVING_CONFIG_ID = 'default_config'
 
 
@@ -34,7 +34,7 @@ def query(question: str) -> str | None:
     serving_config = client.serving_config_path(
         project=solution.PROJECT_ID,
         location=LOCATION,
-        data_store=SEARCH_ENGINE_ID,
+        data_store=DATA_STORE_ID,
         serving_config=SERVING_CONFIG_ID,
     )
 
