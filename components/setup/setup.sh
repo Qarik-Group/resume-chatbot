@@ -27,7 +27,7 @@ else
 fi
 
 log "Installing Python packages..."
-pip install -r requirements.txt
+pip install -r requirements.txt -r ../common/requirements.txt
 
 TMP="./tmp"
 mkdir -p "${TMP}"
@@ -38,5 +38,5 @@ python3 create_dummy_embeddings.py
 log "Copy dummy embeddings to the GCS bucket..."
 gsutil cp "${TMP}/dummy_embeddings.json" "gs://${ME_EMBEDDING_BUCKET}/init_index/dummy_embeddings.json"
 
-log "Creating VertexAI Embeddings engine and other needed infra..."
-python3 vertexai_setup.py
+# log "Creating VertexAI Embeddings engine and other needed infra..."
+# python3 vertexai_setup.py

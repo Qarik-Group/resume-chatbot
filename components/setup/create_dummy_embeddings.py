@@ -24,5 +24,5 @@ from query_engine.matching_engine import ME_DIMENSIONS
 init_embedding = {'id': str(uuid.uuid4()), 'embedding': list(np.zeros(ME_DIMENSIONS))}
 
 # dump embedding to a local file
-with open('dummy_embeddings.json', 'w') as f:
+with open('tmp/dummy_embeddings.json', 'w') as f:
     json.dump(init_embedding, f)
