@@ -29,17 +29,17 @@ log "Ask a question about a person..."
 #   -d "{\"question\":\"What is email of Steven Kim?\"}" \
 #   "${CHAT_SVC_DEV_URL}/ask_gpt"
 
-gcurl -i -X POST \
--d "{\"question\":\"Can Roman Kharkovski build a cloud native application using Kubernetes?\"}" \
-  "${CHAT_SVC_DEV_URL}/ask_palm_chroma_langchain"
+# gcurl -i -X POST \
+# -d "{\"question\":\"Can Roman Kharkovski build a cloud native application using Kubernetes?\"}" \
+#   "${CHAT_SVC_DEV_URL}/ask_palm_chroma_langchain"
 
 # gcurl -i -X POST \
 #   -d "{\"question\":\"What is email of Steven Kim?\"}" \
 #   "${CHAT_SVC_DEV_URL}/ask_palm_chroma_langchain"
 
-# gcurl -i -X POST \
-#   -d "{\"question\":\"Can Roman Kharkovski build a cloud native application using Kubernetes?\"}" \
-#   "${CHAT_SVC_DEV_URL}/ask_vertexai"
+gcurl -i -X POST \
+  -d "{\"question\":\"Can Roman Kharkovski build a cloud native application using Kubernetes?\"}" \
+  "${CHAT_SVC_DEV_URL}/ask_vertexai"
 
 # gcurl -i -X POST \
 #   -d "{\"question\":\"What is email of Steven Kim?\"}" \

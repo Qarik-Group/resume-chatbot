@@ -18,7 +18,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import time
 import uuid
 from typing import Any, Iterable, List, Optional, Type
@@ -26,8 +25,10 @@ from typing import Any, Iterable, List, Optional, Type
 import google.auth
 import google.auth.transport.requests
 import requests
-from google.cloud import aiplatform_v1, storage
+from common.log import Logger, log
+from google.cloud import aiplatform, aiplatform_v1, storage  # noqa: F401
 from google.cloud.aiplatform import MatchingEngineIndex, MatchingEngineIndexEndpoint
+from google.oauth2 import service_account  # noqa: F401
 from google.oauth2.service_account import Credentials
 from langchain.docstore.document import Document
 from langchain.embeddings import TensorflowHubEmbeddings, VertexAIEmbeddings
@@ -35,7 +36,8 @@ from langchain.embeddings.base import Embeddings
 from langchain.vectorstores.base import VectorStore
 from pydantic import BaseModel
 
-logger = logging.getLogger()
+logger = Logger(__name__).get_logger()
+logger.info('Initializing...')
 
 ME_DIMENSIONS: int = 768
 """Vertex PaLM Embedding has maximum 768 dimensions."""""
@@ -43,6 +45,7 @@ EMBEDDING_NUM_BATCH: int = 5
 """Number of documents to embed in a batch."""
 
 
+@log
 def _rate_limit(max_per_minute):
     """Utility functions for Embeddings API with rate limiting."""
     period = 60 / max_per_minute
@@ -60,6 +63,7 @@ class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
     """Custom Vertex AI Embeddings class to override embed_documents method."""
     requests_per_minute: int
 
+    @log
     def embed_documents(self, texts: List[str], batch_size: int = EMBEDDING_NUM_BATCH) -> List[List[float]]:
         """Embeds a list of documents with rate limit."""
         limiter = _rate_limit(self.requests_per_minute)
@@ -67,8 +71,7 @@ class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
         docs = list(texts)
 
         while docs:
-            # Working in batches because the API accepts maximum 5
-            # documents per request to get embeddings
+            # Working in batches because the API accepts maximum 5 documents per request to get embeddings
             head, docs = (
                 docs[: batch_size],
                 docs[batch_size:],
@@ -83,11 +86,8 @@ class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
 class MatchingEngine(VectorStore):
     """Vertex Matching Engine implementation of the vector store.
 
-    While the embeddings are stored in the Matching Engine, the embedded
-    documents will be stored in GCS.
-
-    An existing Index and corresponding Endpoint are preconditions for
-    using this module.
+    While the embeddings are stored in the Matching Engine, the embedded documents will be stored in GCS.
+    An existing Index and corresponding Endpoint are preconditions for using this module.
 
     See usage in docs/modules/indexes/vectorstores/examples/matchingengine.ipynb
 
@@ -112,19 +112,14 @@ class MatchingEngine(VectorStore):
 
         Attributes:
             project_id: The GCS project id.
-            index: The created index class. See
-            ~:func:`MatchingEngine.from_components`.
-            endpoint: The created endpoint class. See
-            ~:func:`MatchingEngine.from_components`.
-            embedding: A :class:`Embeddings` that will be used for
-            embedding the text sent. If none is sent, then the
+            index: The created index class. See ~:func:`MatchingEngine.from_components`.
+            endpoint: The created endpoint class. See ~:func:`MatchingEngine.from_components`.
+            embedding: A :class:`Embeddings` that will be used for embedding the text sent. If none is sent, then the
             multilingual Tensorflow Universal Sentence Encoder will be used.
             gcs_client: The Google Cloud Storage client.
             credentials (Optional): Created GCP credentials.
         """
         super().__init__()
-        self._validate_google_libraries_installation()
-
         self.project_id = project_id
         self.region = region
         self.index = index
@@ -137,18 +132,7 @@ class MatchingEngine(VectorStore):
         self.credentials = credentials
         self.gcs_bucket_name = gcs_bucket_name
 
-    def _validate_google_libraries_installation(self) -> None:
-        """Validates that Google libraries that are needed are installed."""
-        try:
-            from google.cloud import aiplatform, storage  # noqa: F401
-            from google.oauth2 import service_account  # noqa: F401
-        except ImportError:
-            raise ImportError(
-                'You must run `pip install --upgrade '
-                'google-cloud-aiplatform google-cloud-storage`'
-                'to use the MatchingEngine Vectorstore.'
-            )
-
+    @log
     def add_texts(
         self,
         texts: Iterable[str],
@@ -191,17 +175,17 @@ class MatchingEngine(VectorStore):
                 )
                 response = self.index_client.upsert_datapoints(request=upsert_request)
                 insert_datapoints_payload = []
+
         if len(insert_datapoints_payload) > 0:
             upsert_request = aiplatform_v1.UpsertDatapointsRequest(
                 index=self.index.name, datapoints=insert_datapoints_payload
             )
             _ = self.index_client.upsert_datapoints(request=upsert_request)
 
-        logger.debug('Updated index with new configuration.')
         logger.info(f'Indexed {len(ids)} documents to Matching Engine.')
-
         return ids  # type: ignore
 
+    @log
     def _upload_to_gcs(self, data: str, gcs_location: str) -> None:
         """Uploads data to gcs_location.
 
@@ -213,13 +197,14 @@ class MatchingEngine(VectorStore):
         blob = bucket.blob(gcs_location)
         blob.upload_from_string(data)
 
+    @log
     def get_matches(
         self,
         embeddings: List[str],
         n_matches: int,
         index_endpoint: MatchingEngineIndexEndpoint,
     ) -> str:
-        """Get matches from matching engine given a vector query Uses public endpoint."""
+        """Get matches from matching engine given a vector query using public endpoint."""
         request_data = {
             'deployed_index_id': index_endpoint.deployed_indexes[0].id,
             'return_full_datapoint': True,
@@ -237,13 +222,13 @@ class MatchingEngine(VectorStore):
         endpoint_json_data = json.dumps(request_data)
 
         logger.debug(f'Querying Matching Engine Index Endpoint {rpc_address}')
-
         request = google.auth.transport.requests.Request()
         self.credentials.refresh(request)
         header = {'Authorization': 'Bearer ' + self.credentials.token}
 
         return requests.post(rpc_address, data=endpoint_json_data, headers=header)
 
+    @log
     def similarity_search(
         self, query: str, k: int = 4, search_distance: float = 0.65, **kwargs: Any
     ) -> List[Document]:
@@ -260,8 +245,8 @@ class MatchingEngine(VectorStore):
 
         logger.debug(f'Embedding query {query}.')
         embedding_query = self.embedding.embed_documents([query])
-        deployed_index_id = self._get_index_id()
-        logger.debug(f'Deployed Index ID = {deployed_index_id}')
+        # deployed_index_id = self._get_index_id()
+        # logger.debug(f'Deployed Index ID = {deployed_index_id}')
 
         # TO-DO: Pending query sdk integration
         # response = self.endpoint.match(
@@ -284,10 +269,8 @@ class MatchingEngine(VectorStore):
 
         results = []
 
-        # I'm only getting the first one because queries receives an array
-        # and the similarity_search method only receives one query. This
-        # means that the match method will always return an array with only
-        # one element.
+        # Only getting the first one because queries receives an array and the similarity_search method only receives
+        # one query. This means that the match method will always return an array with only one element.
         for doc in response[0]['neighbors']:
             page_content = self._download_from_gcs(
                 f'documents/{doc["datapoint"]["datapointId"]}'
@@ -301,16 +284,14 @@ class MatchingEngine(VectorStore):
             if 'distance' in doc:
                 metadata['score'] = doc['distance']
                 if doc['distance'] >= search_distance:
-                    results.append(
-                        Document(page_content=page_content, metadata=metadata)
-                    )
+                    results.append(Document(page_content=page_content, metadata=metadata))
             else:
                 results.append(Document(page_content=page_content, metadata=metadata))
 
         logger.debug('Downloaded documents for query.')
-
         return results
 
+    @log
     def _get_index_id(self) -> str:
         """Gets the correct index id for the endpoint.
 
@@ -324,6 +305,7 @@ class MatchingEngine(VectorStore):
 
         raise ValueError(f'No index with id {self.index.name} deployed on endpoint {self.endpoint.display_name}.')
 
+    @log
     def _download_from_gcs(self, gcs_location: str) -> str:
         """Downloads from GCS in text format.
 
@@ -410,15 +392,10 @@ class MatchingEngine(VectorStore):
             credentials.refresh(request)
 
         index = cls._create_index_by_id(index_id, project_id, region, credentials)
-        endpoint = cls._create_endpoint_by_id(
-            endpoint_id, project_id, region, credentials
-        )
-
+        endpoint = cls._create_endpoint_by_id(endpoint_id, project_id, region, credentials)
         gcs_client = cls._get_gcs_client(credentials, project_id)
         index_client = cls._get_index_client(project_id, region, credentials)
-        index_endpoint_client = cls._get_index_endpoint_client(
-            project_id, region, credentials
-        )
+        index_endpoint_client = cls._get_index_endpoint_client(project_id, region, credentials)
         cls._init_aiplatform(project_id, region, gcs_bucket_name, credentials)
 
         return cls(
@@ -435,8 +412,8 @@ class MatchingEngine(VectorStore):
         )
 
     @classmethod
-    def _validate_gcs_bucket(cls, gcs_bucket_name: str) -> str:
-        """Validates the gcs_bucket_name as a bucket name.
+    def _validate_gcs_bucket(cls, name: str) -> str:
+        """Validates the 'name' as a bucket name.
 
         Args:
               gcs_bucket_name: The received bucket uri.
@@ -445,15 +422,13 @@ class MatchingEngine(VectorStore):
               A valid gcs_bucket_name or throws ValueError if full path is
               provided.
         """
-        gcs_bucket_name = gcs_bucket_name.replace('gs://', '')
-        if '/' in gcs_bucket_name:
-            raise ValueError(f'The argument gcs_bucket_name should only be the bucket name. Received {gcs_bucket_name}')
-        return gcs_bucket_name
+        name = name.replace('gs://', '')
+        if '/' in name:
+            raise ValueError(f'The argument gcs_bucket_name should only be the bucket name. Received {name}')
+        return name
 
     @classmethod
-    def _create_credentials_from_file(
-        cls, json_credentials_path: Optional[str]
-    ) -> Optional[Credentials]:
+    def _create_credentials_from_file(cls, json_credentials_path: Optional[str]) -> Optional[Credentials]:
         """Creates credentials for GCP.
 
         Args:
@@ -464,14 +439,9 @@ class MatchingEngine(VectorStore):
              An optional of Credentials or None, in which case the default
              will be used.
         """
-
-        from google.oauth2 import service_account
-
         credentials = None
         if json_credentials_path is not None:
-            credentials = service_account.Credentials.from_service_account_file(
-                json_credentials_path
-            )
+            credentials = service_account.Credentials.from_service_account_file(json_credentials_path)
 
         return credentials
 
@@ -487,9 +457,6 @@ class MatchingEngine(VectorStore):
         Returns:
             A configured MatchingEngineIndex.
         """
-
-        from google.cloud import aiplatform_v1
-
         logger.debug(f'Creating matching engine index with id {index_id}.')
         index_client = cls._get_index_client(project_id, region, credentials)
         request = aiplatform_v1.GetIndexRequest(name=index_id)
@@ -510,9 +477,6 @@ class MatchingEngine(VectorStore):
             :param region:
             :param credentials:
         """
-
-        from google.cloud import aiplatform
-
         logger.debug(f'Creating endpoint with id {endpoint_id}.')
         return aiplatform.MatchingEngineIndexEndpoint(
             index_endpoint_name=endpoint_id,
@@ -530,9 +494,6 @@ class MatchingEngine(VectorStore):
         Returns:
             A configured GCS client.
         """
-
-        from google.cloud import storage
-
         return storage.Client(credentials=credentials, project=project_id)
 
     @classmethod
@@ -544,9 +505,6 @@ class MatchingEngine(VectorStore):
         Returns:
             A configured Matching Engine Index client.
         """
-
-        from google.cloud import aiplatform_v1
-
         # PARENT = f'projects/{project_id}/locations/{region}'
         ENDPOINT = f'{region}-aiplatform.googleapis.com'
         return aiplatform_v1.IndexServiceClient(
@@ -562,9 +520,6 @@ class MatchingEngine(VectorStore):
         Returns:
             A configured Matching Engine Index Endpoint client.
         """
-
-        from google.cloud import aiplatform_v1
-
         # PARENT = f'projects/{project_id}/locations/{region}'
         ENDPOINT = f'{region}-aiplatform.googleapis.com'
         return aiplatform_v1.IndexEndpointServiceClient(
@@ -588,19 +543,8 @@ class MatchingEngine(VectorStore):
             gcs_bucket_name: GCS staging location.
             credentials: The GCS Credentials object.
         """
-
-        from google.cloud import aiplatform
-
-        logger.debug(
-            f'Initializing AI Platform for project {project_id} on '
-            f'{region} and for {gcs_bucket_name}.'
-        )
-        aiplatform.init(
-            project=project_id,
-            location=region,
-            staging_bucket=gcs_bucket_name,
-            credentials=credentials,
-        )
+        logger.debug(f'Initializing AI Platform for project {project_id} on {region} and for {gcs_bucket_name}.')
+        aiplatform.init(project=project_id, location=region, staging_bucket=gcs_bucket_name, credentials=credentials)
 
     @classmethod
     def _get_default_embeddings(cls) -> TensorflowHubEmbeddings:

@@ -68,7 +68,7 @@ from the GCS bucket every time there is a change in one or more objects in the b
 In order to build and deploy this project you need the following:
 
 - ChatGPT API key
-- Google PaLM key
+- Google PaLM key (use https://makersuite.google.com)
 - Allow listed account for Google Gen AI Enterprise Search
 - Meta Llama 2 key
 - Install GCLoud SDK
@@ -107,9 +107,21 @@ In order to build and deploy this project you need the following:
     However aware that the initial setup will take more than an hour because it takes that long to propagate the SSL
     certificate settings. I recommend setting `ENABLE_EAP` to `false` for the simple development and experimentation.
 
-- Add any number of PDF files with resumes to the [data](data) folder. Files shall be named using 'Firstname
+- Add any number of PDF files with resumes to the [data](data) folder. The implementation detail of LlamaIndex and
+  ChatGP in this project uses specific naming for resume files. Specifically, files shall be named using 'Firstname
   Lastname.pdf' format with space separating first and last name. Optionally you can append 'Resume' after last name.
-  For example: 'Roman Kharkovski Resume.pdf'.
+  For example: 'Roman Kharkovski Resume.pdf'. The Google PaLM and Enterprise Search implementations do not require any
+  specific naming of files, therefore if you want to load up financial documents, technical documentation, user manuals,
+  etc. it will still work ok.
+
+- Optional (only if you need plan to run services locally for test or dev): Install Node.js and React:
+
+```bash
+brew update
+brew install node
+cd "${PROJECT_HOME}/components/client"
+npm i react-scripts
+```
 
 - Create new virtual environment (if VSCode prompts you to switch to this new virtual environment, accept it). You may
   decide to have a separate Virtual Environment for each service, or have one common for all services:
@@ -123,6 +135,13 @@ In order to build and deploy this project you need the following:
 
   ```bash
   source "${PROJECT_HOME}/.venv/bin/activate"
+  ```
+
+- Optional (only if you need plan to run services locally for test or dev): Install proper Python modules:
+
+  ```bash
+  cd "${PROJECT_HOME}/components"
+  pip install -r ./common/requirements.txt -r ./query_engine/requirements.txt -r ./resume_manager/requirements.txt"
   ```
 
 - Complete the setup:
@@ -178,6 +197,10 @@ URL to the page source code:
 - Open the chatbot web page using url from the deployment step above and interact with the bot. At this point all
   services should work, except for the Google Enterprise Search. To enable Google Enterprise Search, refer to the
   section below.
+
+- Optional: If you are using sensitive data (such as your company financial, or other documents) in this project, you
+  either must enable IAP to protect your deployed Cloud Run instances, or, make those instances visible only to internal
+  VPC traffic and access them using the [Cloud Run proxy](https://github.com/GoogleCloudPlatform/cloud-run-proxy).
 
 ## Create Google Enterprise Search Gen AI App
 
@@ -327,6 +350,16 @@ process (or as a local container), and run UI in a local NodeJS process (or a lo
 
 - Once you open the local client UI in your browser, navigate to the "Settings" menu option and update the "Backend URL"
   to point to your local server: [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
+# Replacing resumes with your own data
+
+If you have working project with resume data and need to try it out with different type of data (financial statements,
+or something else):
+
+- Delete resume files from the GCS bucket with source resumes (`resume-originals-${PROJECT_ID}`) and upload your own
+  files into it.
+- Delete VertexAI index (refer to the `components/setup/delete_index.sh` script).
+- Run VertexAI setup (`components/setup/delete_index.sh`). resumes.
 
 # Credits
 
