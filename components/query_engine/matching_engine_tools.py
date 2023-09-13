@@ -15,18 +15,19 @@
 
 """Utility functions to create Index and deploy the index to an Endpoint."""
 
-import logging
 import time
 from datetime import datetime
 
+from common.log import Logger, log, log_params
 from google.cloud import aiplatform_v1 as aipv1
 from google.protobuf import struct_pb2
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger()
+logger = Logger(__name__).get_logger()
+logger.info('Initializing...')
 
 
 class MatchingEngineUtils:
+    @log_params
     def __init__(self, project_id: str, region: str, index_name: str):
         self.project_id = project_id
         self.region = region
@@ -44,6 +45,7 @@ class MatchingEngineUtils:
             client_options=dict(api_endpoint=ENDPOINT)
         )
 
+    @log
     def get_index(self):
         # Check if index exists
         request = aipv1.ListIndexesRequest(parent=self.PARENT)
@@ -62,6 +64,7 @@ class MatchingEngineUtils:
             index = self.index_client.get_index(request=request)
             return index
 
+    @log
     def get_index_endpoint(self):
         # Check if index endpoint exists
         request = aipv1.ListIndexEndpointsRequest(parent=self.PARENT)
@@ -82,6 +85,7 @@ class MatchingEngineUtils:
             )
             return index_endpoint
 
+    @log
     def create_index(
         self,
         embedding_gcs_uri: str,
@@ -153,7 +157,7 @@ class MatchingEngineUtils:
             )
 
             # Poll the operation until it's done successfully.
-            logging.info('Poll the operation to create index ...')
+            logger.info('Poll the operation to create index ...')
             while True:
                 if r.done():
                     break
@@ -161,12 +165,11 @@ class MatchingEngineUtils:
                 print('.', end='')
 
             index = r.result()
-            logger.info(
-                f'Index {self.index_name} created with resource name as {index.name}'
-            )
+            logger.info(f'Index {self.index_name} created with resource name as {index.name}')
 
         return index
 
+    @log
     def deploy_index(
         self,
         machine_type: str = 'e2-standard-2',
@@ -192,9 +195,7 @@ class MatchingEngineUtils:
                     + f'{index_endpoint.public_endpoint_domain_name}'
                 )
             else:
-                logger.info(
-                    f'Index endpoint {self.index_endpoint_name} does not exists. Creating index endpoint...'
-                )
+                logger.info(f'Index endpoint {self.index_endpoint_name} does not exists. Creating index endpoint...')
                 index_endpoint_request = {'display_name': self.index_endpoint_name}
 
                 if network:
@@ -205,9 +206,7 @@ class MatchingEngineUtils:
                 r = self.index_endpoint_client.create_index_endpoint(
                     parent=self.PARENT, index_endpoint=index_endpoint_request
                 )
-                logger.info(
-                    f'Deploying index to endpoint with long running operation {r._operation.name}'
-                )
+                logger.info(f'Deploying index to endpoint with long running operation {r._operation.name}')
 
                 logger.info('Poll the operation to create index endpoint ...')
                 while True:
@@ -276,6 +275,7 @@ class MatchingEngineUtils:
 
         return index_endpoint
 
+    @log
     def get_index_and_endpoint(self):
         # Get index id if exists
         index = self.get_index()
@@ -287,6 +287,7 @@ class MatchingEngineUtils:
 
         return index_id, index_endpoint_id
 
+    @log
     def delete_index(self):
         # Check if index exists
         index = self.get_index()
@@ -300,6 +301,7 @@ class MatchingEngineUtils:
         else:
             raise Exception('Index {index_name} does not exists.')
 
+    @log
     def delete_index_endpoint(self):
         # Check if index endpoint exists
         index_endpoint = self.get_index_endpoint()

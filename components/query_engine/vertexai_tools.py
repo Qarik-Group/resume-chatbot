@@ -22,7 +22,7 @@ https://github.com/GoogleCloudPlatform/generative-ai/blob/main/language/use-case
 import textwrap
 
 from common import solution
-from common.log import Logger
+from common.log import Logger, log
 # import vertexai
 from google.cloud import aiplatform
 from langchain.chains import RetrievalQA
@@ -92,7 +92,7 @@ def _wrap(s):
 
 # vertexai.init(project=PROJECT_ID, location=REGION)
 
-# Initialize LangChain Models.
+logger.debug('Initialize VertexAI LangChain Models...')
 _llm = VertexAI(
     model_name='text-bison@001',
     max_output_tokens=1024,
@@ -102,12 +102,11 @@ _llm = VertexAI(
     verbose=True,
 )
 
-_embeddings = CustomVertexAIEmbeddings(
-    requests_per_minute=EMBEDDING_QPM,
-)
+logger.debug('Creating custom embeddings class...')
+_embeddings = CustomVertexAIEmbeddings(requests_per_minute=EMBEDDING_QPM)
 
-_mengine = MatchingEngineUtils(PROJECT_ID, ME_REGION, ME_INDEX_NAME)
-
+logger.debug('Creating matching engine utils...')
+_mengine = MatchingEngineUtils(project_id=PROJECT_ID, region=ME_REGION, index_name=ME_INDEX_NAME)
 ME_INDEX_ID, ME_INDEX_ENDPOINT_ID = _mengine.get_index_and_endpoint()
 
 # Initialize Matching Engine vector store with text embeddings model
@@ -163,7 +162,7 @@ _qa.combine_documents_chain.verbose = True
 _qa.combine_documents_chain.llm_chain.verbose = True  # type: ignore
 _qa.combine_documents_chain.llm_chain.llm.verbose = True  # type: ignore
 
-
+@log
 def query(question: str, qa=_qa, k=NUMBER_OF_RESULTS, search_distance=SEARCH_DISTANCE_THRESHOLD) -> str:
     """Ask a question to the Vertex PaLM model. This is main exposed method of this module."""
     qa.retriever.search_kwargs['search_distance'] = search_distance
